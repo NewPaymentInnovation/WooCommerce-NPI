@@ -63,8 +63,7 @@ class Gateway
 	 * @param $gatewayURL
 	 * @param array $options
 	 */
-	public function __construct($merchantID, $merchantSecret, $gatewayURL, array $options = [])
-	{
+	public function __construct($merchantID, $merchantSecret, $gatewayURL, array $options = []) {
 		$this->merchantID = $merchantID;
 		$this->merchantSecret = $merchantSecret;
 
@@ -124,8 +123,7 @@ class Gateway
 	 *
 	 * @return string  request HTML form.
 	 */
-	public function hostedRequest(array $request, bool $iframe = false, bool $modal = false): string
-	{
+	public function hostedRequest(array $request, bool $iframe = false, bool $modal = false): string {
 		static::debug(__METHOD__ . '() - args=', func_get_args());
 
 		if (!isset($request['redirectURL'])) {
@@ -171,8 +169,7 @@ HTML;
 	 * @param array $request request data
 	 * @return array request response
 	 */
-	public function directRequest(array $request): array
-	{
+	public function directRequest(array $request): array {
 		static::debug(__METHOD__ . '() - args=', func_get_args());
 
 		$request['signature'] = static::sign($request, $this->merchantSecret);
@@ -189,8 +186,7 @@ HTML;
 	 * @param int $amount
 	 * @return array
 	 */
-	public function refundRequest(string $xref, int $amount): array
-	{
+	public function refundRequest(string $xref, int $amount): array {
 		$queryPayload = [
 			'merchantID' => $this->merchantID,
 			'xref' => $xref,
@@ -263,8 +259,7 @@ HTML;
 	 * @param	string	$secret		secret to use in signing
 	 * @return	boolean				true if signature verifies
 	 */
-	static public function verifyResponse(array &$response, $secret = null)
-	{
+	static public function verifyResponse(array &$response, $secret = null) {
 
 		if (!$response || !isset($response['responseCode'])) {
 			throw new \RuntimeException('Invalid response from Payment Gateway');
@@ -338,8 +333,7 @@ HTML;
 	 * @param mixed $value field value
 	 * @return    string                    HTML containing <INPUT> tags
 	 */
-	static protected function fieldToHtml(string $name, $value): string
-	{
+	static protected function fieldToHtml(string $name, $value): string {
 		$ret = '';
 		if (is_array($value)) {
 			foreach ($value as $n => $v) {
@@ -376,8 +370,7 @@ HTML;
 	 * @param mixed $partial partial signing
 	 * @return    string                signature
 	 */
-	static public function sign(array $data, string $secret, $partial = false)
-	{
+	static public function sign(array $data, string $secret, $partial = false) {
 
 		// Support signing only a subset of the data fields
 		if ($partial) {
@@ -420,8 +413,7 @@ HTML;
 	 * @param	mixed		...			value to debug
 	 * @return	void
 	 */
-	static protected function debug()
-	{
+	static protected function debug() {
 		if (static::$debug) {
 			$msg = '';
 			foreach (func_get_args() as $arg) {
