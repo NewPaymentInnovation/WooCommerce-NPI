@@ -401,7 +401,6 @@ class WC_Payment_Network extends WC_Payment_Gateway
 					[
 						'wc-api' => 'wc_' . $this->id,
 						'3dsResponse' => 'Y',
-						 'XDEBUG_SESSION_START' => 'asdf',
 					],
 					home_url('/')
 				),
@@ -477,9 +476,16 @@ class WC_Payment_Network extends WC_Payment_Gateway
 	{
 		$order = new WC_Order((int)$response['orderRef']);
 
-		$order_notes  = "\r\nResponse Code : {$response['responseCode']}\r\n";
+		// If callback or gateway response add note.
+		if (isset($_GET['callback'])) {
+			$order_notes  .= "\r\nType : Callback Response\r\n";
+		} else {
+			$order_notes  .= "\r\nType : Gateway Response\r\n";
+		}
+
+		$order_notes .= "\r\nResponse Code : {$response['responseCode']}\r\n";
 		$order_notes .= "Message : {$response['responseMessage']}\r\n";
-		$order_notes .= 'Amount Received : ' . number_format($response['amount'] / 100, 2) . "\r\n";
+		$order_notes .= 'Amount Received : ' . number_format($response['amountReceived'] / 100, 2) . "\r\n";
 		$order_notes .= "Unique Transaction Code : {$response['transactionUnique']}";
 
 		$order->set_transaction_id($response['xref']);
@@ -600,7 +606,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			if ($response['responseCode'] == 0) {
 
 				$this->debug_log('INFO', "A subscription payment was accepted by the gateway");
-				$order_notes .= "Amount Received : " . number_format($response['amount'] / 100, 2) . "\r\n";
+				$order_notes .= "Amount Received : " . number_format($response['amountReceived'] / 100, 2) . "\r\n";
 				$renewal_order->add_order_note(__(ucwords($this->method_title) . ' payment completed.' . $order_notes, $this->lang));
 				$renewal_order->payment_complete();
 				$renewal_order->save();
@@ -681,43 +687,41 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		// Get the WC Order that matched the orderRef in the response.
 		$order = new WC_Order((int)$response['orderRef']);
 
-		// Check if this is a call back trying to update a paid/failed order.
-		if (isset($_GET['callback']) && $order->get_status() != 'pending') {
-
+		// If order has been paid and this a callback log and ignore.
+		if (isset($_GET['callback']) && $order->is_paid()) {
 			$this->debug_log('INFO', 'Callback received payment for response already processed');
 			return;
-			
-		} else if ($order->get_status() != 'pending') {
+		}
 
-			// Check if this is a dupliate response.
-			if ($_COOKIE['duplicate_payment_response_count'] > 0) {
+		if ($order->is_paid() && $_COOKIE['duplicate_payment_response_count'] > 0) {
 
-				$this->debug_log("NOTICE", "A duplicate response has been received for an order thats already processed a payment");
-				// Add an order note
-				$order_notes   = "\r\nA duplicate payment response was received.\r\n";
-				$order_notes  .= "\r\nOrder #{$response['orderRef']}\r\n";
-				$order_notes  .= "\r\nOutcome {$response['responseMessage']}\r\n";
-				$order_notes  .= "\r\nXREF {$response['xref']}\r\n";
-				$order_notes  .= "\r\nA Duplicate count number {$_COOKIE['duplicate_payment_response_count']}.\r\n";
-				$order->add_order_note(__(ucwords($this->method_title) . '- Duplicate Response!' . $order_notes, $this->lang));
-				// Redirect customer to order paid/failed page.
-				$this->redirect($this->get_return_url($order));
+			$this->debug_log("NOTICE", "A duplicate response has been received for an order thats already processed a payment");
+			// Add an order note
+			$order_notes   = "\r\nA duplicate payment response was received.\r\n";
+			$order_notes  .= "\r\nOrder #{$response['orderRef']}\r\n";
+			$order_notes  .= "\r\nOutcome {$response['responseMessage']}\r\n";
+			$order_notes  .= "\r\nXREF {$response['xref']}\r\n";
+			$order_notes  .= "\r\nA Duplicate count number {$_COOKIE['duplicate_payment_response_count']}.\r\n";
+			$order->add_order_note(__(ucwords($this->method_title) . '- Duplicate Response!' . $order_notes, $this->lang));
+			// Redirect customer to order page.
+			$this->redirect($this->get_return_url($order));
+
+		} else if ($order->is_paid()) {
+
+			// Increase duplicate_payment_response_count by one if the inter
+			if ($this->settings['type'] !== 'direct') {
+				setcookie('duplicate_payment_response_count', ($_COOKIE['duplicate_payment_response_count'] + 1), [
+					'expires' => time() + 500,
+					'path' => '/',
+					'domain' => $_SERVER['HTTP_HOST'],
+					'secure' => true,
+					'httponly' => false,
+					'samesite' => 'None'
+				]);
 			}
-		}
 
-		// Increase duplicate_payment_response_count by one if the inter
-		if ($this->settings['type'] !== 'direct') {
-			setcookie('duplicate_payment_response_count', ($_COOKIE['duplicate_payment_response_count'] + 1), [
-				'expires' => time() + 500,
-				'path' => '/',
-				'domain' => $_SERVER['HTTP_HOST'],
-				'secure' => true,
-				'httponly' => false,
-				'samesite' => 'None'
-			]);
+			$this->redirect($this->get_return_url($order));
 		}
-
-		// Duplicate check passed. Handle the response.
 
 		// Create a wallet if a walletID in the response.
 		if (!empty($response['walletID'])) {
@@ -738,6 +742,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			$this->debug_log('INFO', "Payment for order {$response['orderRef']} failed");
 			$this->process_error('Payment failed', $response);
 		}
+		
 	}
 
 	##########################
@@ -924,12 +929,18 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		wc_add_notice($message, 'error');
 
 		$redirectUrl = get_site_url();
-		if (isset($response['orderRef'], $response['responseCode'], $response['responseMessage'], $response['amount'])) {
+		if (isset($response['orderRef'], $response['responseCode'], $response['responseMessage'])) {
 			$order = new WC_Order((int)$response['orderRef']);
 
-			$order_notes  = "\r\nResponse Code : {$response['responseCode']}\r\n";
+			// If callback or gateway response add note.
+			if (isset($_GET['callback'])) {
+				$order_notes  .= "\r\nType : Callback Response\r\n";
+			} else {
+				$order_notes  .= "\r\nType : Gateway Response\r\n";
+			}
+
+			$order_notes .= "\r\nResponse Code : {$response['responseCode']}\r\n";
 			$order_notes .= "Message : {$response['responseMessage']}\r\n";
-			$order_notes .= 'Amount Received : ' . number_format($response['amount'] / 100, 2) . "\r\n";
 			$order_notes .= "Unique Transaction Code : {$response['transactionUnique']}";
 
 			$order->update_status('failed');
