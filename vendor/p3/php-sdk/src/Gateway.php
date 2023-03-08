@@ -25,12 +25,12 @@ class Gateway
 	/**
 	 * @var string	Merchant Account Id or Alias
 	 */
-	protected $merchantID = '100856';
+	protected $merchantID = null;
 
 	/**
 	 * @var string	Secret for above Merchant Account
 	 */
-	protected $merchantSecret = 'Circle4Take40Idea';
+	protected $merchantSecret = null;
 
 	/**
 	 * Useful response codes
@@ -77,14 +77,14 @@ class Gateway
 		}
 
 		if (preg_match('/paymentform(\/.*)?/', $gatewayURL) == false) {
-			$this->hostedUrl = $gatewayURL.'hosted/';
+			$this->hostedUrl = $gatewayURL . 'hosted/';
 		} else {
 			$this->hostedUrl = $gatewayURL;
 			$gatewayURL = preg_replace('/paymentform(\/.*)?/', '', $gatewayURL, 1);
 		}
 
-		$this->hostedModalUrl = $gatewayURL.'hosted/modal/';
-		$this->directUrl = $gatewayURL.'direct/';
+		$this->hostedModalUrl = $gatewayURL . 'hosted/modal/';
+		$this->directUrl = $gatewayURL . 'direct/';
 
 		if (array_key_exists('client', $options)) {
 			$this->client = $options['client'];
@@ -221,7 +221,7 @@ HTML;
 				]);
 				break;
 			default:
-				throw new \InvalidArgumentException('Something went wrong, we can\'t find transaction '. $xref);
+				throw new \InvalidArgumentException('Something went wrong, we can\'t find transaction ' . $xref);
 		}
 
 		$payload['signature'] = static::sign($payload, $this->merchantSecret);
@@ -263,7 +263,8 @@ HTML;
 	 * @param	string	$secret		secret to use in signing
 	 * @return	boolean				true if signature verifies
 	 */
-	static public function verifyResponse(array &$response, $secret = null) {
+	static public function verifyResponse(array &$response, $secret = null)
+	{
 
 		if (!$response || !isset($response['responseCode'])) {
 			throw new \RuntimeException('Invalid response from Payment Gateway');
@@ -346,7 +347,9 @@ HTML;
 			}
 		} else {
 			// Convert all applicable characters or none printable characters to HTML entities
-			$value = preg_replace_callback('/[\x00-\x1f]/', function($matches) { return '&#' . ord($matches[0]) . ';'; }, htmlentities($value, ENT_COMPAT, 'UTF-8', true));
+			$value = preg_replace_callback('/[\x00-\x1f]/', function ($matches) {
+				return '&#' . ord($matches[0]) . ';';
+			}, htmlentities($value, ENT_COMPAT, 'UTF-8', true));
 			$ret = "<input type=\"hidden\" name=\"{$name}\" value=\"{$value}\" />";
 		}
 
@@ -373,7 +376,8 @@ HTML;
 	 * @param mixed $partial partial signing
 	 * @return    string                signature
 	 */
-	static public function sign(array $data, string $secret, $partial = false) {
+	static public function sign(array $data, string $secret, $partial = false)
+	{
 
 		// Support signing only a subset of the data fields
 		if ($partial) {
@@ -416,7 +420,8 @@ HTML;
 	 * @param	mixed		...			value to debug
 	 * @return	void
 	 */
-	static protected function debug() {
+	static protected function debug()
+	{
 		if (static::$debug) {
 			$msg = '';
 			foreach (func_get_args() as $arg) {
