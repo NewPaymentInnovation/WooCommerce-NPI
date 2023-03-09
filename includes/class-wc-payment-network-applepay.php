@@ -70,7 +70,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 
 		// Get main modules settings to use in this sub module.
 		$mainModuleID = str_replace("_applepay", "", $this->id);
-		$mainModuleSettings = get_option('woocommerce_' . $mainModuleID . '_main_module' . '_settings');
+		$mainModuleSettings = get_option('woocommerce_' . $mainModuleID . '_settings');
 
 		$this->defaulGatewayURL = $mainModuleSettings['gatewayURL'];
 		$this->defaultMerchantID = $mainModuleSettings['merchantID'];
