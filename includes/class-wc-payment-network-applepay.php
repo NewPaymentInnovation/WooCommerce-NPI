@@ -838,6 +838,7 @@ HTML;
 			}
 
 			$shippingAmountTotal = $cart->get_shipping_total();
+			$cartTotal = $cart->total;
 
 		}
 
