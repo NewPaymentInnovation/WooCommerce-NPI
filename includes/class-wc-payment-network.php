@@ -881,7 +881,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 
 		//when the wallets is enabled, the user is logged in and there is a wallet ID in the response.
 		if ($this->settings['customerWalletsEnabled'] === 'Y' && isset($response['walletID']) && $order->get_user_id() != 0) {
-			$wallet_table_name = $wpdb->prefix . 'woocommerce_' . 'payment_network_' . 'wallets';
+			$wallet_table_name = $wpdb->prefix . 'woocommerce_payment_network_wallets';
 
 			$customersWalletID = $wpdb->get_var(
 				$wpdb->prepare(
