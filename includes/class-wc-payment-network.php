@@ -50,12 +50,12 @@ class WC_Payment_Network extends WC_Payment_Gateway
 	{
 		$configs = include(dirname(__FILE__) . '/../config.php');
 
-		$this->has_fields          				 = false;
-		$this->id                  				 = str_replace(' ', '', strtolower($configs['default']['gateway_title']));
-		$this->lang                				 = strtolower('woocommerce_' . $this->id);
-		$this->icon                				 = plugins_url('/', dirname(__FILE__)) . 'assets/img/logo.png';
-		$this->method_title        				 = __($configs['default']['gateway_title'], $this->lang);
-		$this->method_description  				 = __($configs['default']['method_description'], $this->lang);
+		$this->has_fields			= false;
+		$this->id					= str_replace(' ', '', strtolower($configs['default']['gateway_title']));
+		$this->lang					= strtolower('woocommerce_' . $this->id);
+		$this->icon					= plugins_url('/', dirname(__FILE__)) . 'assets/img/logo.png';
+		$this->method_title			= __($configs['default']['gateway_title'], $this->lang);
+		$this->method_description	= __($configs['default']['method_description'], $this->lang);
 
 		$this->supports = array(
 			'subscriptions',
@@ -92,7 +92,6 @@ class WC_Payment_Network extends WC_Payment_Gateway
 
 		add_action('woocommerce_api_wc_' . $this->id, array($this, 'process_response_callback'));
 		add_action('woocommerce_scheduled_subscription_payment_' . $this->id, array($this, 'process_scheduled_subscription_payment_callback'), 10, 3);
-		
 	}
 
 	/**
@@ -227,10 +226,10 @@ class WC_Payment_Network extends WC_Payment_Gateway
 				'deviceTimeZone'			=> '0',
 				'deviceCapabilities'		=> '',
 				'deviceScreenResolution'	=> '1x1x1',
-				'deviceAcceptContent'		=> (isset($_SERVER['HTTP_ACCEPT']) ? htmlentities($_SERVER['HTTP_ACCEPT']) : null),
-				'deviceAcceptEncoding'		=> (isset($_SERVER['HTTP_ACCEPT_ENCODING']) ? htmlentities($_SERVER['HTTP_ACCEPT_ENCODING']) : null),
-				'deviceAcceptLanguage'		=> (isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? htmlentities($_SERVER['HTTP_ACCEPT_LANGUAGE']) : null),
-				'deviceAcceptCharset'		=> (isset($_SERVER['HTTP_ACCEPT_CHARSET']) ? htmlentities($_SERVER['HTTP_ACCEPT_CHARSET']) : null),
+				'deviceAcceptContent'		=> (isset($_SERVER['HTTP_ACCEPT']) ? htmlentities($_SERVER['HTTP_ACCEPT']) : '*/*'),
+				'deviceAcceptEncoding'		=> (isset($_SERVER['HTTP_ACCEPT_ENCODING']) ? htmlentities($_SERVER['HTTP_ACCEPT_ENCODING']) : '*'),
+				'deviceAcceptLanguage'		=> (isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? htmlentities($_SERVER['HTTP_ACCEPT_LANGUAGE']) : 'en-gb;q=0.001'),
+
 			];
 
 			$browserInfo = '';
@@ -505,7 +504,8 @@ class WC_Payment_Network extends WC_Payment_Gateway
 	/**
 	 * On 3DS required
 	 */
-	public function on_threeds_required($res) {
+	public function on_threeds_required($res)
+	{
 
 		setcookie('threeDSRef',  $res['threeDSRef'], [
 			'expires' => time() + 600,
@@ -517,13 +517,12 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		]);
 
 		if (isset($_GET['3dsResponse'])) {
-			
+
 			// Echo out the ACS form that will auto submit and then stop executing immediately after.
 			echo Gateway::silentPost($res['threeDSURL'], $res['threeDSRequest']);
 			wp_die();
-
 		} else {
-		
+
 			return [
 				'result' => 'success',
 				'redirect' => add_query_arg(
@@ -702,7 +701,6 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			$order->add_order_note(__(ucwords($this->method_title) . '- Duplicate Response!' . $order_notes, $this->lang));
 			// Redirect customer to order page.
 			$this->redirect($this->get_return_url($order));
-
 		} else if ($order->is_paid()) {
 
 			// Increase duplicate_payment_response_count by one if the inter
@@ -730,16 +728,13 @@ class WC_Payment_Network extends WC_Payment_Gateway
 
 			$this->debug_log('INFO', "Payment for order {$response['orderRef']} was successful");
 			$this->on_order_success($response);
-
 		} else if ((int)$response['responseCode'] === 65802) {
 
 			return $this->on_threeds_required($response);
-
 		} else {
 			$this->debug_log('INFO', "Payment for order {$response['orderRef']} failed");
 			$this->process_error('Payment failed', $response);
 		}
-		
 	}
 
 	##########################
@@ -983,9 +978,8 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		// If logging is not null and $type isin logging verbose selection.
 		if (isset(static::$logging_options[$type])) {
 			wc_get_logger()->{$type}(print_r($logMessage, true) . print_r($objects, true), array('source' => $this->title));
-		}	
+		}
 		// If logging_options empty.
 		return;
 	}
-	
 }
