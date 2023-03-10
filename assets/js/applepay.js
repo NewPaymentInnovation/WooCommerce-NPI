@@ -2,7 +2,6 @@ const debuggingOn = true;
 const ApplePayVersion = 4;
 var ApplePayRequest;
 
-log("Loading Apple pay JS");
 // On window load check if applepay is enabled and can make payments.
 // If it is and can then enable the payment option
 window.onload = function () {
@@ -216,9 +215,9 @@ function applePayButtonClicked() {
 }
 
 /**
- * Caluclate Total
+ * Calculate Total
  *
- * Caluclates the total from the current request's line items.
+ * Calculates the total from the current request's line items.
  * 
  * @param {Array} LineItems
  * @returns {void}
@@ -308,7 +307,7 @@ function log(string, object = null) {
 function processAPIRequest(action, data = {}) {
 	// Create a new FormData.
 	let formData = new FormData();
-	// Add the action and secuirty code to the form data.
+	// Add the action and security code to the form data.
 	formData.append("action", action);
 	formData.append("securitycode", localizeVars.securitycode);
 	// For each key/value in data object add to form data.

@@ -364,7 +364,7 @@ HTML;
 		// If merchantCertFile is .cer convert it to pem.
 		if ($files['merchantCertFile']['type'] === 'application/pkix-cert' || $files['merchantCertFile']['type'] === 'application/x-x509-ca-cert') {
 			$merchantCert = '-----BEGIN CERTIFICATE-----' . PHP_EOL
-			. chunk_split(base64_encode($merchantCert), 64, PHP_EOL)
+				. chunk_split(base64_encode($merchantCert), 64, PHP_EOL)
 				. '-----END CERTIFICATE-----' . PHP_EOL;
 		}
 
@@ -511,12 +511,11 @@ HTML;
 		}
 		// Strip slashes added by WP from the JSON data.
 		$paymentData = stripslashes_deep($_POST['payment']);
-		// Decode the JSON data t
-
+		// Decode the JSON payment token data.
 		$paymentData = json_decode($paymentData);
 
-		if(isset($_POST['orderID']) && $_POST['orderID'] != "false") {
-	
+		if (isset($_POST['orderID']) && $_POST['orderID'] != "false") {
+
 			$order = wc_get_order(wc_get_order_id_by_order_key($_POST['orderID']));
 
 			$order->set_billing_first_name($paymentData->billingContact->givenName);
@@ -526,7 +525,6 @@ HTML;
 			$order->set_billing_city($paymentData->billingContact->locality);
 			$order->set_billing_state($paymentData->billingContact->administrativeArea);
 			$order->set_billing_postcode($paymentData->billingContact->postalCode);
-
 		} else {
 
 			$woocommerceOrderRequest = array(
@@ -567,8 +565,6 @@ HTML;
 			} catch (\Exception $exception) {
 				return false;
 			}
-
-
 		}
 
 		$gatewayTransactionRequest = array(
@@ -595,7 +591,7 @@ HTML;
 		// Add gateway respone to order meta data
 		$order->update_meta_data('gatewayResponse', $gatewayRequestResult);
 		$order->save();
-	
+
 
 		$JSONResponse['paymentComplete'] = false;
 
@@ -660,7 +656,7 @@ HTML;
 	 * )
 	 *
 	 * @param  Array            $data
-	 * @return Array|Booblean    $order
+	 * @return Array|bool	    $order
 	 */
 	private function create_order($data)
 	{
@@ -813,33 +809,37 @@ HTML;
 			$order = wc_get_order(wc_get_order_id_by_order_key($_POST['orderID']));
 
 			foreach ($order->get_items() as $item_id => $item) {
-				array_push($cartContents,
-					array('title' => $item->get_name(),
+				array_push(
+					$cartContents,
+					array(
+						'title' => $item->get_name(),
 						'quantity' => $item->get_quantity(),
 						'price' => $item->get_total() /  $item->get_quantity(),
 						'product_id' => $item->get_product_id(),
-					));
+					)
+				);
 			}
 
 			$shippingAmountTotal = $order->get_shipping_total();
 			$cartTotal = $order->get_total();
-
 		} else {
 
 			$cart = WC()->cart;
 
 			foreach ($cart->cart_contents as $item) {
-				array_push($cartContents,
-					array('title' => $item['data']->get_title(),
+				array_push(
+					$cartContents,
+					array(
+						'title' => $item['data']->get_title(),
 						'quantity' => $item['quantity'],
 						'price' => $item['data']->get_price(),
 						'product_id' => $item['product_id'],
-					));
+					)
+				);
 			}
 
 			$shippingAmountTotal = $cart->get_shipping_total();
 			$cartTotal = $cart->total;
-
 		}
 
 		// Apple Pay request line items.
@@ -860,10 +860,10 @@ HTML;
 
 				// $firstRenewalPaymentDate = new DateTime(WC_Subscriptions_Product::get_first_renewal_payment_date($productID));
 				// $firstPaymentDate = $firstRenewalPaymentDate->format('Y-m-d');
-			  	$firstPaymentDate = WC_Subscriptions_Product::get_trial_expiration_date($productID) 
-			  	? WC_Subscriptions_Product::get_trial_expiration_date($productID) : date('Y-m-d') ;
+				$firstPaymentDate = WC_Subscriptions_Product::get_trial_expiration_date($productID)
+					? WC_Subscriptions_Product::get_trial_expiration_date($productID) : date('Y-m-d');
 
-			   $subscriptionItem = array(
+				$subscriptionItem = array(
 					'label' => "{$itemTitle}",
 					'amount' => $itemPrice,
 					'recurringPaymentStartDate' => $firstPaymentDate,
@@ -877,17 +877,15 @@ HTML;
 					$amountToPay = ($amountToPay + $itemPrice);
 				}
 
-				if ($signUpFee = WC_Subscriptions_Product::get_sign_up_fee($productID) )  {
+				if ($signUpFee = WC_Subscriptions_Product::get_sign_up_fee($productID)) {
 					array_push($lineItems, array('label' => "{$itemTitle} Sign up fee ", 'amount' => $signUpFee));
 				}
 
 				// Add sub
 				array_push($lineItems, $subscriptionItem);
-
 			} else {
 				array_push($lineItems, array('label' => "{$itemQuantity} x {$itemTitle}", 'amount' => ($itemPrice * $itemQuantity)));
 			}
-
 		}
 
 		$applePayRequest = array(
@@ -912,11 +910,11 @@ HTML;
 		// If there are no shipping zones setup, remove the required
 		// shipping fields from the Apple Pay request.
 		if (empty(WC_Shipping_Zones::get_zones())) {
-		   	 unset($applePayRequest['requiredShippingContactFields']);
+			unset($applePayRequest['requiredShippingContactFields']);
 		}
 
-		if ($failedOrderPaymnet) { 
-			 unset($applePayRequest['requiredShippingContactFields']);
+		if ($failedOrderPaymnet) {
+			unset($applePayRequest['requiredShippingContactFields']);
 		}
 
 		if (is_ajax()) {
@@ -937,15 +935,14 @@ HTML;
 			wp_die();
 		}
 
-		if(is_string($_POST['checkoutShippingMethodSelected'])) {
-			
-			$shippingMethodSelected = json_decode(json_encode(array('identifier' => $_POST['checkoutShippingMethodSelected'])));
+		if (is_string($_POST['checkoutShippingMethodSelected'])) {
 
+			$shippingMethodSelected = json_decode(json_encode(array('identifier' => $_POST['checkoutShippingMethodSelected'])));
 		} else {
 			$shippingMethodSelected = json_decode(stripslashes_deep($_POST['shippingMethodSelected']));
 		}
 
-	 	WC()->session->set('chosen_shipping_method', [$shippingMethodSelected]);
+		WC()->session->set('chosen_shipping_method', [$shippingMethodSelected]);
 	}
 
 	/**
@@ -976,7 +973,7 @@ HTML;
 							'detail' => strip_tags($shippingMethod->method_description),
 							'amount' => (isset($shippingMethod->cost) ? $shippingMethod->cost : 0),
 							'identifier' => $shippingMethod->id . ':' . $shippingMethod->instance_id,
-							'selected' => ($shippingMethodSelected->identifier === ($shippingMethod->id . ':' . $shippingMethod->instance_id) ),
+							'selected' => ($shippingMethodSelected->identifier === ($shippingMethod->id . ':' . $shippingMethod->instance_id)),
 						));
 					}
 				}
@@ -1049,7 +1046,6 @@ HTML;
 		$order->add_order_note(__(ucwords($this->method_title) . ' payment failed.' . $orderNotes, $this->lang));
 
 		return $this->get_return_url($order);
-
 	}
 
 	/**
@@ -1224,7 +1220,6 @@ HTML;
 
 				return true;
 			});
-
 		} catch (Exception $exception) {
 			$result = new WP_Error('payment_failed_error', $exception->getMessage());
 			$renewal_order->add_order_note(
