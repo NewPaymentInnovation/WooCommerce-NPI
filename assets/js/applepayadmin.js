@@ -1,5 +1,3 @@
-console.log("Apple Pay admin JS enqueued");
-
 window.onload = function () {
 
 	var merchantCertGenButton = document.getElementById("merchant-cert-gen-button");
