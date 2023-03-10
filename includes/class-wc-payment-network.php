@@ -74,7 +74,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		$this->init_settings();
 
 		// Get setting values
-		$this->title			 	 	= $this->settings['title'];
+		$this->title					= $this->settings['title'];
 		$this->description				= $this->settings['description'];
 		$this->merchant_signature_key	= $this->settings['signature'];
 		static::$logging_options		= (empty($this->settings['logging_options']) ? null : array_flip(array_map('strtoupper', $this->settings['logging_options'])));
@@ -961,7 +961,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		}
 
 		// if our payment gateway is disabled, we do not have to enqueue JS too
-		if ($this->enabled == 'no') {
+		if ($this->enabled === 'no') {
 			return;
 		}
 
