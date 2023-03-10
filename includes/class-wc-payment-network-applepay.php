@@ -39,7 +39,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 	 *
 	 * @var string
 	 */
-	public $defaulGatewayURL;
+	public $defaultGatewayURL;
 
 	/**
 	 * Key used to generate the nonce for AJAX calls.
@@ -72,7 +72,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		$mainModuleID = str_replace("_applepay", "", $this->id);
 		$mainModuleSettings = get_option('woocommerce_' . $mainModuleID . '_settings');
 
-		$this->defaulGatewayURL = $mainModuleSettings['gatewayURL'];
+		$this->defaultGatewayURL = $mainModuleSettings['gatewayURL'];
 		$this->defaultMerchantID = $mainModuleSettings['merchantID'];
 		$this->defaultMerchantSignature = $mainModuleSettings['signature'];
 
@@ -743,7 +743,7 @@ HTML;
 		$gateway = new Gateway(
 			$this->defaultMerchantID,
 			$this->defaultMerchantSignature,
-			$this->defaulGatewayURL
+			$this->defaultGatewayURL
 		);
 
 		$response = $gateway->directRequest($gatewayTransactionRequest);
@@ -1148,7 +1148,7 @@ HTML;
 			$gateway = new Gateway(
 				$this->defaultMerchantID,
 				$this->defaultMerchantSignature,
-				$this->defaulGatewayURL
+				$this->defaultGatewayURL
 			);
 
 			$amountByCurrency = \P3\SDK\AmountHelper::calculateAmountByCurrency($amount, $order->get_currency());
@@ -1173,7 +1173,7 @@ HTML;
 		$gateway = new Gateway(
 			$this->defaultMerchantID,
 			$this->defaultMerchantSignature,
-			$this->defaulGatewayURL
+			$this->defaultGatewayURL
 		);
 
 		// Gets all subscriptions (hopefully just one) linked to this order
