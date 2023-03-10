@@ -961,7 +961,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		}
 
 		// if our payment gateway is disabled, we do not have to enqueue JS too
-		if ('no' === $this->enabled) {
+		if ($this->enabled == 'no') {
 			return;
 		}
 
