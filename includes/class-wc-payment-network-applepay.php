@@ -32,7 +32,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 	 *
 	 * @var string
 	 */
-	public $defaulMerchantSignature;
+	public $defaultMerchantSignature;
 
 	/**
 	 * The gateway URL
@@ -74,7 +74,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 
 		$this->defaulGatewayURL = $mainModuleSettings['gatewayURL'];
 		$this->defaultMerchantID = $mainModuleSettings['merchantID'];
-		$this->defaulMerchantSignature = $mainModuleSettings['signature'];
+		$this->defaultMerchantSignature = $mainModuleSettings['signature'];
 
 		$this->supports = array(
 			'subscriptions',
@@ -742,7 +742,7 @@ HTML;
 	{
 		$gateway = new Gateway(
 			$this->defaultMerchantID,
-			$this->defaulMerchantSignature,
+			$this->defaultMerchantSignature,
 			$this->defaulGatewayURL
 		);
 
@@ -858,8 +858,6 @@ HTML;
 			$productID = wc_get_product($item['product_id']);
 			if (class_exists('WC_Subscriptions_Product') && WC_Subscriptions_Product::is_subscription($productID)) {
 
-				// $firstRenewalPaymentDate = new DateTime(WC_Subscriptions_Product::get_first_renewal_payment_date($productID));
-				// $firstPaymentDate = $firstRenewalPaymentDate->format('Y-m-d');
 				$firstPaymentDate = WC_Subscriptions_Product::get_trial_expiration_date($productID)
 					? WC_Subscriptions_Product::get_trial_expiration_date($productID) : date('Y-m-d');
 
@@ -867,7 +865,6 @@ HTML;
 					'label' => "{$itemTitle}",
 					'amount' => $itemPrice,
 					'recurringPaymentStartDate' => $firstPaymentDate,
-					// 'recurringPaymentEndDate' => WC_Subscriptions_Product::get_expiration_date($productID),
 					'recurringPaymentIntervalUnit' => WC_Subscriptions_Product::get_period($productID),
 					'paymentTiming' => 'recurring',
 				);
@@ -925,8 +922,10 @@ HTML;
 	}
 
 	/**
-	 * Update Shipp
-	 *
+	 * Update Shipping method.
+	 * 
+	 * This function will update the shipping
+	 * method selected on the Apple Pay screen.
 	 */
 	public function update_shipping_method()
 	{
@@ -946,9 +945,10 @@ HTML;
 	}
 
 	/**
-	 * Get Updated APple Pay Request
+	 * Get Shipping Methods
 	 *
-	 * Get's a new Apple Pay request.
+	 * This function will get shipping methods 
+	 * available for selection on the Apple Pay screen.
 	 */
 	public function get_shipping_methods()
 	{
@@ -996,7 +996,7 @@ HTML;
 	/**
 	 * On Order Success
 	 *
-	 * Called when the payment is sucessful.
+	 * Called when the payment is successful.
 	 * This will complete the order.
 	 *
 	 * @param Array     $data
@@ -1025,7 +1025,7 @@ HTML;
 	/**
 	 * On Order Fail
 	 *
-	 * Called when the payment is sucessful.
+	 * Called when the payment is successful.
 	 * This will complete the order.
 	 *
 	 * @param Array     $data
@@ -1087,7 +1087,7 @@ HTML;
 	/**
 	 * Payments scripts
 	 *
-	 * Enques the Apple Pay javascript
+	 * Enqueues the Apple Pay javascript
 	 */
 	public function payment_scripts()
 	{
@@ -1147,7 +1147,7 @@ HTML;
 
 			$gateway = new Gateway(
 				$this->defaultMerchantID,
-				$this->defaulMerchantSignature,
+				$this->defaultMerchantSignature,
 				$this->defaulGatewayURL
 			);
 
@@ -1172,7 +1172,7 @@ HTML;
 		// Create a new Gateway instance
 		$gateway = new Gateway(
 			$this->defaultMerchantID,
-			$this->defaulMerchantSignature,
+			$this->defaultMerchantSignature,
 			$this->defaulGatewayURL
 		);
 
