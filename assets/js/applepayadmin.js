@@ -40,7 +40,7 @@ window.onload = function () {
 
 		// Prompt the user to enter a key password
 		let certificateKeyPassword = window.prompt(
-			"Enter a password for the certificate. Note this down and remmember to enter this into the 'Merchant certificate key password' field."
+			"Enter a password for the certificate. Note this down and remember to enter this into the 'Merchant certificate key password' field."
 		);
 
 		// If they do not abort
