@@ -858,8 +858,8 @@ HTML;
 			$productID = wc_get_product($item['product_id']);
 			if (class_exists('WC_Subscriptions_Product') && WC_Subscriptions_Product::is_subscription($productID)) {
 
-				$firstPaymentDate = WC_Subscriptions_Product::get_trial_expiration_date($productID)
-					? WC_Subscriptions_Product::get_trial_expiration_date($productID) : date('Y-m-d');
+				$firstPaymentDate = (WC_Subscriptions_Product::get_trial_expiration_date($productID)
+					? WC_Subscriptions_Product::get_trial_expiration_date($productID) : date('Y-m-d'));
 
 				$subscriptionItem = array(
 					'label' => "{$itemTitle}",
