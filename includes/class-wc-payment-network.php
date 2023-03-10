@@ -241,7 +241,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			$generateMonthOptions = function () use ($parameters) {
 				$str = '';
 				foreach (range(1, 12) as $value) {
-					$s = $parameters['cardExpiryMonth'] == $value ? 'selected' : '';
+					$s = $parameters['cardExpiryMonth'] == ($value ? 'selected' : '');
 					$str .= '<option value="' . str_pad($value, 2, '0', STR_PAD_LEFT) . '" ' . $s . '>' . $value . '</option>' . "\n";
 				}
 
