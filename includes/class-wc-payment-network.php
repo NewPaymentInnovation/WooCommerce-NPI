@@ -251,7 +251,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			$generateYearOptions = function () use ($parameters) {
 				$str = '';
 				foreach (range(date('Y'), date('Y') + 12) as $value) {
-					$s = $parameters['cardExpiryYear'] == $value ? 'selected' : '';
+					$s = $parameters['cardExpiryYear'] == ($value ? 'selected' : '');
 					$str .= '<option value="' . substr($value, 2) . '" ' . $s . '>' . $value . '</option>' . "\n";
 				}
 
