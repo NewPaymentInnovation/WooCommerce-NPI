@@ -51,11 +51,14 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		$configs = include(dirname(__FILE__) . '/../config.php');
 
 		$this->has_fields          				 = false;
-		$this->id                  				 = str_replace(' ', '', strtolower($configs['default']['gateway_title']));
+		$this->id                  				 = str_replace(' ', '', strtolower($configs['gateway_title']));
 		$this->lang                				 = strtolower('woocommerce_' . $this->id);
 		$this->icon                				 = plugins_url('/', dirname(__FILE__)) . 'assets/img/logo.png';
-		$this->method_title        				 = __($configs['default']['gateway_title'], $this->lang);
-		$this->method_description  				 = __($configs['default']['method_description'], $this->lang);
+		$this->method_title        				 = __($configs['gateway_title'], $this->lang);
+		$this->method_description  				 = __($configs['method_description'], $this->lang);
+		$this->default_merchant_id 				 = $configs['default_merchant_id'];
+		$this->default_secret      				 = $configs['default_secret'];
+		$this->default_merchant_country_code 	 = $configs['default_merchant_country_code'];
 
 		$this->supports = array(
 			'subscriptions',
