@@ -186,7 +186,8 @@ HTML;
 	 * @param int $amount
 	 * @return array
 	 */
-	public function refundRequest(string $xref, int $amount): array {
+	public function refundRequest(string $xref, int $amountToRefund): array {
+			// First query the state of the transaction the refund request is for.
 		$queryPayload = [
 			'merchantID' => $this->merchantID,
 			'xref' => $xref,
@@ -194,34 +195,43 @@ HTML;
 		];
 
 		$queryPayload['signature'] = static::sign($queryPayload, $this->merchantSecret);
+		$transaction = $this->client->post($queryPayload);
 
-		$paymentInfo = $this->client->post($queryPayload);
-
-		$state = $paymentInfo['state'] ?? null;
-
-		$payload = [
-			'merchantID' => $this->merchantID,
-			'xref' => $xref,
-		];
-
-		switch ($state) {
-			case 'approved':
-			case 'captured':
-				$payload['action'] = 'CANCEL';
-				break;
-			case 'accepted':
-				$payload = array_merge($payload, [
-					'type' => 1,
-					'action' => 'REFUND_SALE',
-					'amount' => $amount,
-				]);
-				break;
-			default:
-				throw new \InvalidArgumentException('Something went wrong, we can\'t find transaction ' . $xref);
+		if(!isset($transaction['state'])) {
+			throw new \BadMethodCallException('Something went wrong in request processing we can\'t issue a refund transaction.');
 		}
 
-		$payload['signature'] = static::sign($payload, $this->merchantSecret);
-		$res = $this->client->post($payload);
+		$refundRequest = [
+			'merchantID' => $this->merchantID,
+			'xref' => $transaction['xref'],
+		];
+
+		switch ($transaction['state']) {
+			case 'approved':
+			case 'captured':
+				// If amount to refund is equal to the total amount captured/approved then action is cancel.				
+				if($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
+					$refundRequest['action'] = 'CANCEL';
+				} else {
+					$refundRequest['action'] = 'CAPTURE';
+					$refundRequest['amount'] = ($transaction['amountReceived'] - $amountToRefund);
+				}
+				break;
+
+			case 'accepted':
+				$refundRequest = array_merge($refundRequest, [
+					'type' => 1,
+					'action' => 'REFUND_SALE',
+					'amount' => $amountToRefund,
+				]);
+				break;
+				
+			default:
+				throw new \InvalidArgumentException('Something went wrong, we can\'t find transaction '. $xref);
+		}
+
+		$refundRequest['signature'] = static::sign($refundRequest, $this->merchantSecret);
+		$res = $this->client->post($refundRequest);
 
 		if (isset($res['responseCode']) && $res['responseCode'] == "0") {
 			$orderMessage = ($res['responseCode'] == "0" ? "Refund Successful" : "Refund Unsuccessful") . "<br/><br/>";
@@ -242,7 +252,8 @@ HTML;
 			];
 		}
 
-		throw new \BadMethodCallException('Something went wrong in request processing we can\'t issue a refund transaction.');
+		throw new \BadMethodCallException("Something went wrong in request processing we can\'t issue a refund transaction. {$res['responseMessage']}");
+
 	}
 
 	/**
