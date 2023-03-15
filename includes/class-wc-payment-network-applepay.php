@@ -255,17 +255,18 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		// The key password is stored in settings.
 		$currentSavedKeyPassword = $this->settings['merchant_cert_key_password'];
 
-		// Check for files to store.
+		// Check for files to store. If no files to store check if current setup is valid.
 		if (!empty($_FILES['merchantCertFile']['tmp_name']) || !empty($_FILES['merchantCertKey']['tmp_name'])) {
 			$certificateSaveResult = $this->store_merchant_certificates($_FILES, $currentSavedKeyPassword);
 			$certificateSaveResultHTML = ($certificateSaveResult['saved'] ?
 				"<div id=\"certs-saved-container\" class=\"cert-saved\"><label id=\"certificate-saved-label\">Certificates saved</label></div>" :
 				"<div id=\"certs-saved-container\" class=\"cert-saved-error\"><label id=\"certificate-saved-error-label\">Certificates save error: {$certificateSaveResult['error']}</label></div>");
-		}
+		} else {
 
-		$certificateSetupStatus = (openssl_x509_check_private_key($currentSavedCertData, array($currentSavedCertKey, $currentSavedKeyPassword)) ?
-			'<label class="cert-message cert-message-valid">Certificate, key and password saved are all valid</label>' :
-			'<label class="cert-message cert-validation-error">Certificate, key and password saved are not valid</label>');
+			$certificateSetupStatus = (openssl_x509_check_private_key($currentSavedCertData, array($currentSavedCertKey, $currentSavedKeyPassword)) ?
+				'<label class="cert-message cert-message-valid">Certificate, key and password saved are all valid</label>' :
+				'<label class="cert-message cert-validation-error">Certificate, key and password are not setup</label>');
+		}
 
 		// Plugin settings field HTML.
 		$pluginSettingFieldsHTML = '<table class="form-table">' . $this->generate_settings_html(null, false) . '</table>';
@@ -276,7 +277,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		{$pluginSettingFieldsHTML}
 		<hr>
 		<h1 id="apple-pay-merchant-cert-setup-header">Apple Pay merchant certificate setup</h1>
-		<h2>Current Certificate setup status: {$certificateSetupStatus}</h2>
+		<label>Current Certificate setup status: </label>{$certificateSetupStatus}
 		<div>
 		<div id="upload-cert-message">Upload new certificate and key  <img id="upload-cert-help-icon" src="{$this->pluginURL}/assets/img/help-icon.png" alt="CSR file download"></div>
 		<div id="apple-pay-cert-key-upload-container">
