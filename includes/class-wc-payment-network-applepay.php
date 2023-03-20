@@ -99,7 +99,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		add_action('woocommerce_scheduled_subscription_payment_' . $this->id, array($this, 'process_scheduled_subscription_payment_callback'), 10, 3);
 		add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
 		// Enqueue Apple Pay script when main site.
-		if (is_checkout() || is_cart()) {
+		if (true) {
 			add_action('wp_enqueue_scripts', array($this, 'payment_scripts'));
 		}
 		// Enqueue Admin scripts when in plugin settings.
@@ -255,17 +255,16 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		// The key password is stored in settings.
 		$currentSavedKeyPassword = $this->settings['merchant_cert_key_password'];
 
-		// Check for files to store. If no files to store check if current setup is valid.
+		// Check for files to store. If no files to store then check current saved files.
 		if (!empty($_FILES['merchantCertFile']['tmp_name']) || !empty($_FILES['merchantCertKey']['tmp_name'])) {
 			$certificateSaveResult = $this->store_merchant_certificates($_FILES, $currentSavedKeyPassword);
 			$certificateSaveResultHTML = ($certificateSaveResult['saved'] ?
 				"<div id=\"certs-saved-container\" class=\"cert-saved\"><label id=\"certificate-saved-label\">Certificates saved</label></div>" :
 				"<div id=\"certs-saved-container\" class=\"cert-saved-error\"><label id=\"certificate-saved-error-label\">Certificates save error: {$certificateSaveResult['error']}</label></div>");
 		} else {
-
 			$certificateSetupStatus = (openssl_x509_check_private_key($currentSavedCertData, array($currentSavedCertKey, $currentSavedKeyPassword)) ?
 				'<label class="cert-message cert-message-valid">Certificate, key and password saved are all valid</label>' :
-				'<label class="cert-message cert-validation-error">Certificate, key and password are not setup</label>');
+				'<label class="cert-message cert-validation-error">Certificate, key and password are not valid or saved</label>');
 		}
 
 		// Plugin settings field HTML.
@@ -671,13 +670,13 @@ HTML;
 		));
 
 		// Get the chosen shipping method from the session data.
-		$shippingMethodSelected = (object)WC()->session->get('chosen_shipping_method')[0];
+		$shippingMethodSelected = WC()->session->get('chosen_shipping_methods')[0];
 
 		$order = wc_get_order($order_id);
 
 		// Retrieve the customer shipping zone
 		$shipping_zones = WC_Shipping_Zones::get_zones();
-		$shippingMethodID = explode(':', $shippingMethodSelected->identifier);
+		$shippingMethodID = explode(':', $shippingMethodSelected);
 		$shippingMethodIndentifier = $shippingMethodID[0];
 		$shippingMethodInstanceID = $shippingMethodID[1];
 
@@ -847,7 +846,7 @@ HTML;
 		$lineItems = array();
 
 		// Add the shipping amount to the request.
-		array_push($lineItems, array('label' => 'Shipping', 'amount' => '0'));
+		array_push($lineItems, array('label' => 'Shipping', 'amount' => $shippingAmountTotal));
 
 		// For each item in the cart add to line items.
 		foreach ($cartContents as $item) {
@@ -938,11 +937,92 @@ HTML;
 		if (is_string($_POST['checkoutShippingMethodSelected'])) {
 
 			$shippingMethodSelected = json_decode(json_encode(array('identifier' => $_POST['checkoutShippingMethodSelected'])));
+			WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected->identifier));
+			return;
 		} else {
+
 			$shippingMethodSelected = json_decode(stripslashes_deep($_POST['shippingMethodSelected']));
+			WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected->identifier));
 		}
 
-		WC()->session->set('chosen_shipping_method', [$shippingMethodSelected]);
+		WC()->cart->calculate_shipping();
+		WC()->cart->calculate_totals();
+
+		$cartContents = array();
+		$shippingAmountTotal = 0;
+		$cartTotal = 0;
+
+		$cart = WC()->cart;
+
+		foreach ($cart->cart_contents as $item) {
+			array_push(
+				$cartContents,
+				array(
+					'title' => $item['data']->get_title(),
+					'quantity' => $item['quantity'],
+					'price' => $item['data']->get_price(),
+					'product_id' => $item['product_id'],
+				)
+			);
+		}
+
+		$shippingAmountTotal = $cart->get_shipping_total();
+		$cartTotal = $cart->total;
+
+		// Apple Pay request line items.
+		$lineItems = array();
+
+		// Add the shipping amount to the request.
+		array_push($lineItems, array('label' => 'Shipping', 'amount' => $shippingAmountTotal));
+
+		// For each item in the cart add to line items.
+		foreach ($cartContents as $item) {
+
+			$itemTitle = $item['title'];
+			$itemPrice = $item['price'];
+			$itemQuantity = $item['quantity'];
+
+			$productID = wc_get_product($item['product_id']);
+			if (class_exists('WC_Subscriptions_Product') && WC_Subscriptions_Product::is_subscription($productID)) {
+
+				$firstPaymentDate = (WC_Subscriptions_Product::get_trial_expiration_date($productID)
+					? WC_Subscriptions_Product::get_trial_expiration_date($productID) : date('Y-m-d'));
+
+				$subscriptionItem = array(
+					'label' => "{$itemTitle}",
+					'amount' => $itemPrice,
+					'recurringPaymentStartDate' => $firstPaymentDate,
+					'recurringPaymentIntervalUnit' => WC_Subscriptions_Product::get_period($productID),
+					'paymentTiming' => 'recurring',
+				);
+
+				// Add recurring cost if first payment is today,
+				if (WC_Subscriptions_Product::get_trial_expiration_date($productID)) {
+					$amountToPay = ($amountToPay + $itemPrice);
+				}
+
+				if ($signUpFee = WC_Subscriptions_Product::get_sign_up_fee($productID)) {
+					array_push($lineItems, array('label' => "{$itemTitle} Sign up fee ", 'amount' => $signUpFee));
+				}
+
+				// Add sub
+				array_push($lineItems, $subscriptionItem);
+			} else {
+				array_push($lineItems, array('label' => "{$itemQuantity} x {$itemTitle}", 'amount' => ($itemPrice * $itemQuantity)));
+			}
+		}
+
+		// Return the response
+		$JSONResponse = array(
+			'lineItems' => $lineItems,
+			'total' => $cartTotal
+		);
+
+		if (is_ajax()) {
+			wp_send_json_success($JSONResponse);
+		} else {
+			wp_die();
+		}
 	}
 
 	/**
@@ -963,7 +1043,7 @@ HTML;
 		$countryCode = $shippingContactSelectDetails->countryCode;
 		$newShippingMethods = array();
 		// Get the chosen shipping method from the session data.
-		$shippingMethodSelected =  (object)WC()->session->get('chosen_shipping_method')[0];
+		$shippingMethodSelected =  WC()->session->get('chosen_shipping_methods')[0];
 
 		foreach ($zones as $zone) {
 			foreach ($zone['zone_locations'] as $zonelocation) {
@@ -974,17 +1054,92 @@ HTML;
 							'detail' => strip_tags($shippingMethod->method_description),
 							'amount' => (isset($shippingMethod->cost) ? $shippingMethod->cost : 0),
 							'identifier' => $shippingMethod->id . ':' . $shippingMethod->instance_id,
-							'selected' => ($shippingMethodSelected->identifier === ($shippingMethod->id . ':' . $shippingMethod->instance_id)),
+							'selected' => ($shippingMethodSelected === ($shippingMethod->id . ':' . $shippingMethod->instance_id)),
 						));
 					}
 				}
 			}
 		}
+		WC()->customer->set_shipping_country($countryCode);
+		// Set selected shipping method or top one as default
+		WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected));
+
+		WC()->cart->calculate_shipping();
+		WC()->cart->calculate_totals();
+		// Get line items
+
+		$cartContents = array();
+		$shippingAmountTotal = 0;
+		$cartTotal = 0;
+
+		$cart = WC()->cart;
+
+		foreach ($cart->cart_contents as $item) {
+			array_push(
+				$cartContents,
+				array(
+					'title' => $item['data']->get_title(),
+					'quantity' => $item['quantity'],
+					'price' => $item['data']->get_price(),
+					'product_id' => $item['product_id'],
+				)
+			);
+		}
+
+		$shippingAmountTotal = $cart->get_shipping_total();
+		$cartTotal = $cart->total;
+
+
+		// Apple Pay request line items.
+		$lineItems = array();
+
+		// Add the shipping amount to the request.
+		array_push($lineItems, array('label' => 'Shipping', 'amount' => $shippingAmountTotal));
+
+		// For each item in the cart add to line items.
+		foreach ($cartContents as $item) {
+
+			$itemTitle = $item['title'];
+			$itemPrice = $item['price'];
+			$itemQuantity = $item['quantity'];
+
+			$productID = wc_get_product($item['product_id']);
+			if (class_exists('WC_Subscriptions_Product') && WC_Subscriptions_Product::is_subscription($productID)) {
+
+				$firstPaymentDate = (WC_Subscriptions_Product::get_trial_expiration_date($productID)
+					? WC_Subscriptions_Product::get_trial_expiration_date($productID) : date('Y-m-d'));
+
+				$subscriptionItem = array(
+					'label' => "{$itemTitle}",
+					'amount' => $itemPrice,
+					'recurringPaymentStartDate' => $firstPaymentDate,
+					'recurringPaymentIntervalUnit' => WC_Subscriptions_Product::get_period($productID),
+					'paymentTiming' => 'recurring',
+				);
+
+				// Add recurring cost if first payment is today,
+				if (WC_Subscriptions_Product::get_trial_expiration_date($productID)) {
+					$amountToPay = ($amountToPay + $itemPrice);
+				}
+
+				if ($signUpFee = WC_Subscriptions_Product::get_sign_up_fee($productID)) {
+					array_push($lineItems, array('label' => "{$itemTitle} Sign up fee ", 'amount' => $signUpFee));
+				}
+
+				// Add sub
+				array_push($lineItems, $subscriptionItem);
+			} else {
+				array_push($lineItems, array('label' => "{$itemQuantity} x {$itemTitle}", 'amount' => ($itemPrice * $itemQuantity)));
+			}
+		}
+
 
 		// Return the response
 		$JSONResponse = array(
 			'status' => (count($newShippingMethods) === 0 ? false : true),
 			'shippingMethods' => $newShippingMethods,
+			'lineItems' => $lineItems,
+			'total' => $cartTotal
 		);
 
 		if (is_ajax()) {

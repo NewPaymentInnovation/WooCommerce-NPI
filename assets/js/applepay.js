@@ -6,6 +6,8 @@ var ApplePayRequest;
 // If it is and can then enable the payment option
 window.onload = function () {
 
+	getApplePayButton();
+
 	jQuery(document.body).on("updated_checkout", function () {
 		getApplePayButton();
 	});
@@ -23,6 +25,7 @@ window.onload = function () {
 			processAPIRequest("get_applepay_request", { orderID: urlParams.get('key') ?? false }).then(function (response) {
 				ApplePayRequest = response.data;
 				log("get_applepay_request", ApplePayRequest);
+				log("get_applepay_request - line items", ApplePayRequest.lineItems);
 				window.document.getElementById("applepay-button-container").style.display = "block";
 			}).catch(function (err) {
 				log("session.onvalidatemerchant - failure: ", err);
@@ -82,28 +85,19 @@ function applePayButtonClicked() {
 	* @returns {void}
 	*/
 	session.onshippingmethodselected = function (event) {
-		log("onShippingMethodSelectedd() ", event);
+		log("onShippingMethodSelected() ", event);
+		log("Pay request line items: ", ApplePayRequest.lineItem);
 
 		processAPIRequest("update_shipping_method", { shippingMethodSelected: JSON.stringify(event.shippingMethod) }).then(function (response) {
 
-			log("session.onshippingmethodselected() - event.shippingMethod.amount: ", event.shippingMethod.amount);
-
-			for (let lineItem in ApplePayRequest.lineItems) {
-				if (ApplePayRequest.lineItems[lineItem].label == "Shipping") {
-					ApplePayRequest.lineItems[lineItem].amount = event.shippingMethod.amount;
-				}
-			}
-
-			log("session.onshippingmethodselected() - ApplePayRequest.lineItems: ", ApplePayRequest.lineItems);
-
-			ApplePayRequest.total.amount = calculateTotalFromLineItems(ApplePayRequest.lineItems);
 
 			log("session.onshippingmethodselected() - ApplePayRequest.total: ", ApplePayRequest.total);
-
+			log("response", response.data);
 			session.completeShippingMethodSelection(
-				0,
-				ApplePayRequest.total,
-				ApplePayRequest.lineItems
+				{
+					newTotal: { label: "Total", amount: response.data.total },
+					newLineItems: response.data.lineItems
+				}
 			);
 		})
 			.catch(function (err) {
@@ -118,32 +112,19 @@ function applePayButtonClicked() {
 	*/
 	session.onshippingcontactselected = function (event) {
 
+		log("Pay request line items: ", ApplePayRequest.lineItem);
+
 		log("session.onshippingcontactselected() - event.shippingContact : ", event.shippingContact);
 
 		processAPIRequest("get_shipping_methods", { "shippingContactSelected": JSON.stringify(event.shippingContact) }).then(function (response) {
 
-			let newShippingMethods = response.data.shippingMethods;
-			ApplePayRequest.shippingMethods = (newShippingMethods.length !== 0 ?? newShippingMethods);
-			log("session.onshippingcontactselected() - new shippng methods ", newShippingMethods);
-
-			// Update the line item for shipping, to the default shipping method(index 0)
-			for (let lineItem in ApplePayRequest.lineItems) {
-				if (ApplePayRequest.lineItems[lineItem].label == "Shipping") {
-					ApplePayRequest.lineItems[lineItem].amount =
-						(newShippingMethods.length === 0 ??
-							typeof newShippingMethods[0].amount == "undefined"
-							? 0 : newShippingMethods[0].amount);
-				}
-			}
-
-			log("session.onshippingcontactselected() - Payrequest shipping methods response data: ", response.data);
-			log("session.onshippingcontactselected() - Payrequest shipping methods: ", ApplePayRequest.shippingMethods);
-
 			let completeShippingContactSelectionParams = {
-				newShippingMethods: newShippingMethods,
-				newTotal: { label: (response.data.status ? "Total" : "No shipping options available"), amount: calculateTotalFromLineItems(ApplePayRequest.lineItems) },
-				newLineItems: ApplePayRequest.lineItem,
+				newShippingMethods: response.data.shippingMethods,
+				newTotal: { label: (response.data.status ? "Total" : "No shipping options available"), amount: response.data.total },
+				newLineItems: response.data.lineItems
 			};
+
+			log("completeShippingContactSelectionParams", completeShippingContactSelectionParams);
 
 			if (response.data.status == false) {
 				log("session.onshippingcontactselected() - No shipping methods available ");
@@ -152,6 +133,7 @@ function applePayButtonClicked() {
 				];
 			}
 
+			log("session.onshippingcontactselected() - ApplePayRequest.shippingMethods ", ApplePayRequest.shippingMethods)
 			log("session.onshippingcontactselected() - completeShippingContactSelectionParams: ", completeShippingContactSelectionParams);
 
 			// Complete shipping contact selection.
@@ -214,33 +196,33 @@ function applePayButtonClicked() {
 	};
 }
 
-/**
- * Calculate Total
- *
- * Calculates the total from the current request's line items.
- * 
- * @param {Array} LineItems
- * @returns {void}
- */
-function calculateTotalFromLineItems(lineItems) {
-	log("calculateTotalFromLineItems()", lineItems);
-	let total = 0.00; // Total needs to be of type float when returned even if it's 0.
-	for (item in lineItems) {
+// /**
+//  * Calculate Total
+//  *
+//  * Calculates the total from the current request's line items.
+//  * 
+//  * @param {Array} LineItems
+//  * @returns {void}
+//  */
+// function calculateTotalFromLineItems(lineItems) {
+// 	log("calculateTotalFromLineItems()", lineItems);
+// 	let total = 0.00; // Total needs to be of type float when returned even if it's 0.
+// 	for (item in lineItems) {
 
-		// If this is a subscription product check if today is the first payment.
-		if ("recurringPaymentStartDate" in lineItems[item]) {
+// 		// If this is a subscription product check if today is the first payment.
+// 		if ("recurringPaymentStartDate" in lineItems[item]) {
 
 
-			if (new Date(lineItems[item].recurringPaymentStartDate).getDate() == new Date().getDate()) {
-				total += parseFloat(lineItems[item].amount);
-			}
+// 			if (new Date(lineItems[item].recurringPaymentStartDate).getDate() == new Date().getDate()) {
+// 				total += parseFloat(lineItems[item].amount);
+// 			}
 
-		} else {
-			total += parseFloat(lineItems[item].amount); // Amounts are strings so we need to convert to a float first.
-		}
-	}
-	return "" + total.toFixed(2); // Returns the total as a string with two decimal places.
-}
+// 		} else {
+// 			total += parseFloat(lineItems[item].amount); // Amounts are strings so we need to convert to a float first.
+// 		}
+// 	}
+// 	return "" + total.toFixed(2); // Returns the total as a string with two decimal places.
+// }
 
 /**
  * Is Apple Pay Enabled
