@@ -695,7 +695,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			return;
 		}
 
-		if ($order->is_paid() && $_COOKIE['duplicate_payment_response_count'] > 0) {
+		if ($order->is_paid() && isset($_COOKIE['duplicate_payment_response_count']) && $_COOKIE['duplicate_payment_response_count'] > 0) {
 
 			$this->debug_log("NOTICE", "A duplicate response has been received for an order thats already processed a payment");
 			// Add an order note
