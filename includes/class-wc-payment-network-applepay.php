@@ -263,8 +263,8 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 				"<div id=\"certs-saved-container\" class=\"cert-saved-error\"><label id=\"certificate-saved-error-label\">Certificates save error: {$certificateSaveResult['error']}</label></div>");
 		} else {
 			$certificateSetupStatus = (openssl_x509_check_private_key($currentSavedCertData, array($currentSavedCertKey, $currentSavedKeyPassword)) ?
-				'<label class="cert-message cert-message-valid">Certificate, key and password saved are all valid</label>' :
-				'<label class="cert-message cert-validation-error">Certificate, key and password are not valid or saved</label>');
+			'<label class="cert-message cert-message-valid">Certificate, key and password saved are all valid</label>' :
+			'<label class="cert-message cert-validation-error">Certificate, key and password are not valid or saved</label>');
 		}
 
 		// Plugin settings field HTML.
@@ -822,6 +822,7 @@ HTML;
 
 			$shippingAmountTotal = $order->get_shipping_total();
 			$cartTotal = $order->get_total();
+	
 		} else {
 
 			$cart = WC()->cart;
@@ -939,6 +940,7 @@ HTML;
 			$shippingMethodSelected = json_decode(json_encode(array('identifier' => $_POST['checkoutShippingMethodSelected'])));
 			WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected->identifier));
 			return;
+
 		} else {
 
 			$shippingMethodSelected = json_decode(stripslashes_deep($_POST['shippingMethodSelected']));
@@ -948,74 +950,12 @@ HTML;
 		WC()->cart->calculate_shipping();
 		WC()->cart->calculate_totals();
 
-		$cartContents = array();
-		$shippingAmountTotal = 0;
-		$cartTotal = 0;
-
-		$cart = WC()->cart;
-
-		foreach ($cart->cart_contents as $item) {
-			array_push(
-				$cartContents,
-				array(
-					'title' => $item['data']->get_title(),
-					'quantity' => $item['quantity'],
-					'price' => $item['data']->get_price(),
-					'product_id' => $item['product_id'],
-				)
-			);
-		}
-
-		$shippingAmountTotal = $cart->get_shipping_total();
-		$cartTotal = $cart->total;
-
-		// Apple Pay request line items.
-		$lineItems = array();
-
-		// Add the shipping amount to the request.
-		array_push($lineItems, array('label' => 'Shipping', 'amount' => $shippingAmountTotal));
-
-		// For each item in the cart add to line items.
-		foreach ($cartContents as $item) {
-
-			$itemTitle = $item['title'];
-			$itemPrice = $item['price'];
-			$itemQuantity = $item['quantity'];
-
-			$productID = wc_get_product($item['product_id']);
-			if (class_exists('WC_Subscriptions_Product') && WC_Subscriptions_Product::is_subscription($productID)) {
-
-				$firstPaymentDate = (WC_Subscriptions_Product::get_trial_expiration_date($productID)
-					? WC_Subscriptions_Product::get_trial_expiration_date($productID) : date('Y-m-d'));
-
-				$subscriptionItem = array(
-					'label' => "{$itemTitle}",
-					'amount' => $itemPrice,
-					'recurringPaymentStartDate' => $firstPaymentDate,
-					'recurringPaymentIntervalUnit' => WC_Subscriptions_Product::get_period($productID),
-					'paymentTiming' => 'recurring',
-				);
-
-				// Add recurring cost if first payment is today,
-				if (WC_Subscriptions_Product::get_trial_expiration_date($productID)) {
-					$amountToPay = ($amountToPay + $itemPrice);
-				}
-
-				if ($signUpFee = WC_Subscriptions_Product::get_sign_up_fee($productID)) {
-					array_push($lineItems, array('label' => "{$itemTitle} Sign up fee ", 'amount' => $signUpFee));
-				}
-
-				// Add sub
-				array_push($lineItems, $subscriptionItem);
-			} else {
-				array_push($lineItems, array('label' => "{$itemQuantity} x {$itemTitle}", 'amount' => ($itemPrice * $itemQuantity)));
-			}
-		}
+		$cartData = $this->get_cart_data();
 
 		// Return the response
 		$JSONResponse = array(
-			'lineItems' => $lineItems,
-			'total' => $cartTotal
+			'lineItems' => $cartData['cartItems'],
+			'total' => $cartData['cartTotal']
 		);
 
 		if (is_ajax()) {
@@ -1023,6 +963,9 @@ HTML;
 		} else {
 			wp_die();
 		}
+
+
+
 	}
 
 	/**
@@ -1064,9 +1007,42 @@ HTML;
 		// Set selected shipping method or top one as default
 		WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected));
 
+		$cartData = $this->get_cart_data();
+
+		// Return the response
+		$JSONResponse = array(
+			'status' => (count($newShippingMethods) === 0 ? false : true),
+			'shippingMethods' => $newShippingMethods,
+			'lineItems' => $cartData['cartItems'],
+			'total' => $cartData['cartTotal']
+		);
+
+		if (is_ajax()) {
+			wp_send_json_success($JSONResponse);
+		} else {
+			wp_die();
+		}
+	}
+
+	/**
+	 * Get shopping cart items and totals
+	 *
+	 * This function will recalculate the shopping 
+	 * carts totals including shipping cost and return
+	 * the data as an array. It is assumed at this 
+	 * point a shipping method has been selected, 
+	 * otherwise no shipping costs will returned 
+	 * which can result in mismatched amounts 
+	 * between the order and ApplePay token
+	 * 
+	 * returns Array
+	 */
+	public function get_cart_data() 
+	{
+	
+		// Recalculate cart totals.
 		WC()->cart->calculate_shipping();
 		WC()->cart->calculate_totals();
-		// Get line items
 
 		$cartContents = array();
 		$shippingAmountTotal = 0;
@@ -1074,21 +1050,21 @@ HTML;
 
 		$cart = WC()->cart;
 
-		foreach ($cart->cart_contents as $item) {
-			array_push(
-				$cartContents,
-				array(
-					'title' => $item['data']->get_title(),
-					'quantity' => $item['quantity'],
-					'price' => $item['data']->get_price(),
-					'product_id' => $item['product_id'],
-				)
-			);
-		}
+			foreach ($cart->cart_contents as $item) {
+				array_push(
+					$cartContents,
+					array(
+						'title' => $item['data']->get_title(),
+						'quantity' => $item['quantity'],
+						'price' => $item['data']->get_price(),
+						'product_id' => $item['product_id'],
+					)
+				);
+			}
 
-		$shippingAmountTotal = $cart->get_shipping_total();
-		$cartTotal = $cart->total;
-
+			$shippingAmountTotal = $cart->get_shipping_total();
+			$cartTotal = $cart->total;
+		
 
 		// Apple Pay request line items.
 		$lineItems = array();
@@ -1134,19 +1110,7 @@ HTML;
 		}
 
 
-		// Return the response
-		$JSONResponse = array(
-			'status' => (count($newShippingMethods) === 0 ? false : true),
-			'shippingMethods' => $newShippingMethods,
-			'lineItems' => $lineItems,
-			'total' => $cartTotal
-		);
-
-		if (is_ajax()) {
-			wp_send_json_success($JSONResponse);
-		} else {
-			wp_die();
-		}
+		return array('cartItems' => $lineItems, 'cartTotal' => $cartTotal, 'shippingAmountTotal' => $shippingAmountTotal );
 	}
 
 	/**
