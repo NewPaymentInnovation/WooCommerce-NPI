@@ -99,7 +99,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		add_action('woocommerce_scheduled_subscription_payment_' . $this->id, array($this, 'process_scheduled_subscription_payment_callback'), 10, 3);
 		add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
 		// Enqueue Apple Pay script when main site.
-		if (true) {
+		if (is_checkout() || is_cart()) {
 			add_action('wp_enqueue_scripts', array($this, 'payment_scripts'));
 		}
 		// Enqueue Admin scripts when in plugin settings.
@@ -255,8 +255,14 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		// The key password is stored in settings.
 		$currentSavedKeyPassword = $this->settings['merchant_cert_key_password'];
 
+		$certificateSaveResultHTML = '';
+		$certificateSetupStatus = '';
+
+
 		// Check for files to store. If no files to store then check current saved files.
-		if (!empty($_FILES['merchantCertFile']['tmp_name']) || !empty($_FILES['merchantCertKey']['tmp_name'])) {
+		if ((isset($_FILES['merchantCertFile']['tmp_name']) &&  isset($_FILES['merchantCertKey']['tmp_name'])) && 
+			(!empty($_FILES['merchantCertFile']['tmp_name']) || !empty($_FILES['merchantCertKey']['tmp_name']))) {
+
 			$certificateSaveResult = $this->store_merchant_certificates($_FILES, $currentSavedKeyPassword);
 			$certificateSaveResultHTML = ($certificateSaveResult['saved'] ?
 				"<div id=\"certs-saved-container\" class=\"cert-saved\"><label id=\"certificate-saved-label\">Certificates saved</label></div>" :
@@ -276,7 +282,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		{$pluginSettingFieldsHTML}
 		<hr>
 		<h1 id="apple-pay-merchant-cert-setup-header">Apple Pay merchant certificate setup</h1>
-		<label>Current Certificate setup status: </label>{$certificateSetupStatus}
+		<p><label>Current Certificate setup status: </label>{$certificateSetupStatus}</p>
 		<div>
 		<div id="upload-cert-message">Upload new certificate and key  <img id="upload-cert-help-icon" src="{$this->pluginURL}/assets/img/help-icon.png" alt="CSR file download"></div>
 		<div id="apple-pay-cert-key-upload-container">
@@ -609,10 +615,8 @@ HTML;
 		$JSONResponse['redirect'] = $this->get_return_url($order);
 		$JSONResponse['message'] = ($JSONResponse['paymentComplete'] ? 'Approved' : 'Declined');
 
-		if (is_ajax()) {
-			wp_send_json_success($JSONResponse);
-		}
-		wp_die();
+		wp_send_json_success($JSONResponse);
+		
 	}
 
 	/**
@@ -675,14 +679,14 @@ HTML;
 		$order = wc_get_order($order_id);
 
 		// Retrieve the customer shipping zone
-		$shipping_zones = WC_Shipping_Zones::get_zones();
+		$shippingZones = WC_Shipping_Zones::get_zones();
 		$shippingMethodID = explode(':', $shippingMethodSelected);
 		$shippingMethodIndentifier = $shippingMethodID[0];
 		$shippingMethodInstanceID = $shippingMethodID[1];
 
 		// For each shipping method in zone locations in shipping zones, find the one
 		// selected on the Apple pay window by the user.
-		foreach ($shipping_zones as $zone) {
+		foreach ($shippingZones as $zone) {
 			foreach ($zone['zone_locations'] as $zonelocation) {
 				if ($zonelocation->code === $data['shippingAddress']['country_code']) {
 					foreach ($zone['shipping_methods'] as $shippingMethod) {
@@ -915,11 +919,9 @@ HTML;
 			unset($applePayRequest['requiredShippingContactFields']);
 		}
 
-		if (is_ajax()) {
-			wp_send_json_success($applePayRequest);
-		} else {
-			wp_die();
-		}
+		wp_send_json_success($applePayRequest);
+		wp_die();
+
 	}
 
 	/**
@@ -935,36 +937,44 @@ HTML;
 			wp_die();
 		}
 
-		if (is_string($_POST['checkoutShippingMethodSelected'])) {
+		// Check there is a shipping method selected being posted.
+		if(!isset($_POST['checkoutShippingMethodSelected']) || empty($_POST['checkoutShippingMethodSelected'])) {
 
-			$shippingMethodSelected = json_decode(json_encode(array('identifier' => $_POST['checkoutShippingMethodSelected'])));
-			WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected->identifier));
-			return;
+			// If it's just a string on it's own set the method and return. This is the checkout page informing
+			// of the change in method.
+			if (is_string($_POST['checkoutShippingMethodSelected'])) {
+
+				// $shippingMethodSelected = json_decode(json_encode(array('identifier' => $_POST['checkoutShippingMethodSelected'])));
+				// WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected->identifier));
+				WC()->session->set('chosen_shipping_methods', array('identifier' => $_POST['checkoutShippingMethodSelected']));
+				return;
+
+			} else {
+
+				// If the selected method is not a string then it's the Apple Pay UI updating. 
+				// New cart data will be needed in a response.
+				$shippingMethodSelected = json_decode(stripslashes_deep($_POST['shippingMethodSelected']));
+				WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected->identifier));
+			}
+
+			WC()->cart->calculate_shipping();
+			WC()->cart->calculate_totals();
+
+			$cartData = $this->get_cart_data();
+
+			// Return the response
+			$JSONResponse = array(
+				'lineItems' => $cartData['cartItems'],
+				'total' => $cartData['cartTotal']
+			);
 
 		} else {
-
-			$shippingMethodSelected = json_decode(stripslashes_deep($_POST['shippingMethodSelected']));
-			WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected->identifier));
+			$JSONResponse = array(
+				'error' => 'Missing shipping contact'
+			);
 		}
 
-		WC()->cart->calculate_shipping();
-		WC()->cart->calculate_totals();
-
-		$cartData = $this->get_cart_data();
-
-		// Return the response
-		$JSONResponse = array(
-			'lineItems' => $cartData['cartItems'],
-			'total' => $cartData['cartTotal']
-		);
-
-		if (is_ajax()) {
-			wp_send_json_success($JSONResponse);
-		} else {
-			wp_die();
-		}
-
-
+		wp_send_json_success($JSONResponse);
 
 	}
 
@@ -1017,11 +1027,8 @@ HTML;
 			'total' => $cartData['cartTotal']
 		);
 
-		if (is_ajax()) {
-			wp_send_json_success($JSONResponse);
-		} else {
-			wp_die();
-		}
+		wp_send_json_success($JSONResponse);
+
 	}
 
 	/**
@@ -1110,7 +1117,7 @@ HTML;
 		}
 
 
-		return array('cartItems' => $lineItems, 'cartTotal' => $cartTotal, 'shippingAmountTotal' => $shippingAmountTotal );
+		return array('cartItems' => $lineItems, 'cartTotal' => $cartTotal, 'shippingAmountTotal' => $shippingAmountTotal);
 	}
 
 	/**

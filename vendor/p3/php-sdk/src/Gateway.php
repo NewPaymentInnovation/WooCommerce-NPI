@@ -187,7 +187,7 @@ HTML;
 	 * @return array
 	 */
 	public function refundRequest(string $xref, int $amountToRefund): array {
-			// First query the state of the transaction the refund request is for.
+		// First query the state of the transaction the refund request is for.
 		$queryPayload = [
 			'merchantID' => $this->merchantID,
 			'xref' => $xref,
@@ -197,7 +197,7 @@ HTML;
 		$queryPayload['signature'] = static::sign($queryPayload, $this->merchantSecret);
 		$transaction = $this->client->post($queryPayload);
 
-		if(!isset($transaction['state'])) {
+		if (!isset($transaction['state'])) {
 			throw new \BadMethodCallException('Something went wrong in request processing we can\'t issue a refund transaction.');
 		}
 

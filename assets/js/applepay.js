@@ -196,34 +196,6 @@ function applePayButtonClicked() {
 	};
 }
 
-// /**
-//  * Calculate Total
-//  *
-//  * Calculates the total from the current request's line items.
-//  * 
-//  * @param {Array} LineItems
-//  * @returns {void}
-//  */
-// function calculateTotalFromLineItems(lineItems) {
-// 	log("calculateTotalFromLineItems()", lineItems);
-// 	let total = 0.00; // Total needs to be of type float when returned even if it's 0.
-// 	for (item in lineItems) {
-
-// 		// If this is a subscription product check if today is the first payment.
-// 		if ("recurringPaymentStartDate" in lineItems[item]) {
-
-
-// 			if (new Date(lineItems[item].recurringPaymentStartDate).getDate() == new Date().getDate()) {
-// 				total += parseFloat(lineItems[item].amount);
-// 			}
-
-// 		} else {
-// 			total += parseFloat(lineItems[item].amount); // Amounts are strings so we need to convert to a float first.
-// 		}
-// 	}
-// 	return "" + total.toFixed(2); // Returns the total as a string with two decimal places.
-// }
-
 /**
  * Is Apple Pay Enabled
  *
