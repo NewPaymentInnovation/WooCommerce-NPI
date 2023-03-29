@@ -476,6 +476,8 @@ class WC_Payment_Network extends WC_Payment_Gateway
 	{
 		$order = new WC_Order((int)$response['orderRef']);
 
+		$order_notes = '';
+
 		// If callback or gateway response add note.
 		if (isset($_GET['callback'])) {
 			$order_notes  .= "\r\nType : Callback Response\r\n";
@@ -693,7 +695,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			return;
 		}
 
-		if ($order->is_paid() && $_COOKIE['duplicate_payment_response_count'] > 0) {
+		if ($order->is_paid() && isset($_COOKIE['duplicate_payment_response_count']) && $_COOKIE['duplicate_payment_response_count'] > 0) {
 
 			$this->debug_log("NOTICE", "A duplicate response has been received for an order thats already processed a payment");
 			// Add an order note
@@ -931,6 +933,8 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		$redirectUrl = get_site_url();
 		if (isset($response['orderRef'], $response['responseCode'], $response['responseMessage'])) {
 			$order = new WC_Order((int)$response['orderRef']);
+
+			$order_notes = '';
 
 			// If callback or gateway response add note.
 			if (isset($_GET['callback'])) {
