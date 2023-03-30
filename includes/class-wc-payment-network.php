@@ -468,7 +468,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			case 'approved':
 			case 'captured':
 				// If amount to refund is equal to the total amount captured/approved then action is cancel.				
-				if($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
+				if ($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
 					$refundRequest['action'] = 'CANCEL';
 				} else {
 					$refundRequest['action'] = 'CAPTURE';

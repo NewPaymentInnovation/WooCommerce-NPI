@@ -1045,7 +1045,7 @@ HTML;
 
 		if (!empty($couponCode = $_POST['couponCode'])) {
 
-			if ( WC()->cart->has_discount($couponCode)) {
+			if (WC()->cart->has_discount($couponCode)) {
 				return;
 			}
 			
@@ -1339,7 +1339,7 @@ HTML;
 			case 'approved':
 			case 'captured':
 				// If amount to refund is equal to the total amount captured/approved then action is cancel.				
-				if($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
+				if ($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
 					$refundRequest['action'] = 'CANCEL';
 				} else {
 					$refundRequest['action'] = 'CAPTURE';
