@@ -259,7 +259,8 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		$certificateSetupStatus = '';
 
 		// Check for files to store. If no files to store then check current saved files.
-		if (!empty($_FILES['merchantCertFile']['tmp_name']) && !empty($_FILES['merchantCertKey']['tmp_name'])) {
+		if ((isset($_FILES['merchantCertFile']['tmp_name']) &&  isset($_FILES['merchantCertKey']['tmp_name'])) && 
+			(!empty($_FILES['merchantCertFile']['tmp_name']) || !empty($_FILES['merchantCertKey']['tmp_name']))) {
 
 			$certificateSaveResult = $this->store_merchant_certificates($_FILES, $currentSavedKeyPassword);
 			$certificateSaveResultHTML = ($certificateSaveResult['saved'] ?
@@ -942,23 +943,13 @@ HTML;
 		}
 
 		// Check there is a shipping method selected being posted.
-		if(!empty($_POST['checkoutShippingMethodSelected']) || !empty($_POST['shippingMethodSelected'])) {
+		if(!empty($_POST['shippingMethodSelected'])) {
 
-			// If it's just a string on it's own set the method and return. This is the checkout page informing
-			// of the change in method.
-			if (is_string($_POST['checkoutShippingMethodSelected'])) {
-
-				WC()->session->set('chosen_shipping_methods', array('identifier' => $_POST['checkoutShippingMethodSelected']));
-				return;
-
-			} else {
-
-				// If the selected method is not a string then it's the Apple Pay UI updating. 
-				// New cart data will be needed in a response.
-				$shippingMethodSelected = json_decode(stripslashes_deep($_POST['shippingMethodSelected']));
-				WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected->identifier));
-			}
-
+			// If the selected method is not a string then it's the Apple Pay UI updating. 
+			// New cart data will be needed in a response.
+			$shippingMethodSelected = json_decode(stripslashes_deep($_POST['shippingMethodSelected']));
+			WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected->identifier));
+			
 			WC()->cart->calculate_shipping();
 			WC()->cart->calculate_totals();
 
@@ -1045,7 +1036,7 @@ HTML;
 
 		if (!empty($couponCode = $_POST['couponCode'])) {
 
-			if (WC()->cart->has_discount($couponCode)) {
+			if ( WC()->cart->has_discount($couponCode)) {
 				return;
 			}
 			
@@ -1339,7 +1330,7 @@ HTML;
 			case 'approved':
 			case 'captured':
 				// If amount to refund is equal to the total amount captured/approved then action is cancel.				
-				if ($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
+				if($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
 					$refundRequest['action'] = 'CANCEL';
 				} else {
 					$refundRequest['action'] = 'CAPTURE';
