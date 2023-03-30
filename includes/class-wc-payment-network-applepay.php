@@ -259,8 +259,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		$certificateSetupStatus = '';
 
 		// Check for files to store. If no files to store then check current saved files.
-		if ((isset($_FILES['merchantCertFile']['tmp_name']) &&  isset($_FILES['merchantCertKey']['tmp_name'])) && 
-			(!empty($_FILES['merchantCertFile']['tmp_name']) || !empty($_FILES['merchantCertKey']['tmp_name']))) {
+		if (!empty($_FILES['merchantCertFile']['tmp_name']) && !empty($_FILES['merchantCertKey']['tmp_name'])) {
 
 			$certificateSaveResult = $this->store_merchant_certificates($_FILES, $currentSavedKeyPassword);
 			$certificateSaveResultHTML = ($certificateSaveResult['saved'] ?
