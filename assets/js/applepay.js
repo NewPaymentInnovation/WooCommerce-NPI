@@ -13,7 +13,7 @@ window.onload = function () {
 	});
 
 	jQuery(document.body).on('change', 'input.shipping_method', function (event) {
-		processAPIRequest("update_shipping_method", { checkoutShippingMethodSelected: event.target.defaultValue })
+		processAPIRequest("update_shipping_method", { "checkoutShippingMethodSelected": event.target.defaultValue })
 		getApplePayButton();
 	});
 
@@ -194,6 +194,26 @@ function applePayButtonClicked() {
 	session.oncancel = function (event) {
 		window.location.reload();
 	};
+
+	session.addEventListener("couponcodechanged", function (event) {
+
+		var newCode = event.couponCode;
+
+		processAPIRequest("apply_coupon_code", { "couponCode": newCode }).then(function (response) {
+
+			let completeCouponCodeChange = {
+				//	newShippingMethods: response.data.shippingMethods,
+				newTotal: { label: "Total", amount: response.data.total },
+				newLineItems: response.data.lineItems
+			};
+
+			session.completeCouponCodeChange(completeCouponCodeChange);
+
+		}).catch(function (err) {
+			log("session.onvalidatemerchant - failure: ", err);
+		});
+
+	});
 }
 
 /**

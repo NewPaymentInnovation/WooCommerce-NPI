@@ -63,6 +63,10 @@ function init_wc_payment_network()
 	add_action('wp_ajax_nopriv_update_shipping_method', array(new WC_Payment_Network_ApplePay, 'update_shipping_method'), 10, 2);
 	add_action('wp_ajax_update_shipping_method', array(new WC_Payment_Network_ApplePay, 'update_shipping_method'), 10, 2);
 
+	// Apple coupon code to Apple Pay request
+	add_action('wp_ajax_nopriv_apply_coupon_code', array(new WC_Payment_Network_ApplePay, 'apply_coupon_code'), 10, 2);
+	add_action('wp_ajax_update_apply_coupon_code', array(new WC_Payment_Network_ApplePay, 'apply_coupon_code'), 10, 2);
+
 	// Generate CSR and KEY files.
 	add_action('wp_ajax_generate_csr_and_key', array(new WC_Payment_Network_ApplePay, 'generate_csr_and_key'), 10, 2);
 }

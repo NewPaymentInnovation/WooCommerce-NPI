@@ -258,7 +258,6 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		$certificateSaveResultHTML = '';
 		$certificateSetupStatus = '';
 
-
 		// Check for files to store. If no files to store then check current saved files.
 		if ((isset($_FILES['merchantCertFile']['tmp_name']) &&  isset($_FILES['merchantCertKey']['tmp_name'])) && 
 			(!empty($_FILES['merchantCertFile']['tmp_name']) || !empty($_FILES['merchantCertKey']['tmp_name']))) {
@@ -909,6 +908,12 @@ HTML;
 			'merchantCapabilities' => array('supports3DS'),
 		);
 
+		// Check if any coupons are avaialble (therfore enabled)
+		// If so add support for them to Apple Pay.
+		if(empty(WC()->cart->get_applied_coupons())) {
+			$applePayRequest['supportsCouponCode'] = true;
+		}
+
 		// If there are no shipping zones setup, remove the required
 		// shipping fields from the Apple Pay request.
 		if (empty(WC_Shipping_Zones::get_zones())) {
@@ -938,14 +943,12 @@ HTML;
 		}
 
 		// Check there is a shipping method selected being posted.
-		if(!isset($_POST['checkoutShippingMethodSelected']) || empty($_POST['checkoutShippingMethodSelected'])) {
+		if(!empty($_POST['checkoutShippingMethodSelected']) || !empty($_POST['shippingMethodSelected'])) {
 
 			// If it's just a string on it's own set the method and return. This is the checkout page informing
 			// of the change in method.
 			if (is_string($_POST['checkoutShippingMethodSelected'])) {
 
-				// $shippingMethodSelected = json_decode(json_encode(array('identifier' => $_POST['checkoutShippingMethodSelected'])));
-				// WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected->identifier));
 				WC()->session->set('chosen_shipping_methods', array('identifier' => $_POST['checkoutShippingMethodSelected']));
 				return;
 
@@ -964,13 +967,14 @@ HTML;
 
 			// Return the response
 			$JSONResponse = array(
+				'status' => true,
 				'lineItems' => $cartData['cartItems'],
-				'total' => $cartData['cartTotal']
+				'total' => $cartData['cartTotal'],
 			);
 
 		} else {
 			$JSONResponse = array(
-				'error' => 'Missing shipping contact'
+				'status' => false,
 			);
 		}
 
@@ -1032,6 +1036,39 @@ HTML;
 	}
 
 	/**
+	 * Apple a coupon code from ApplePay 
+	 */
+	public function apply_coupon_code() {
+
+		if (!wp_verify_nonce($_POST['securitycode'], $this->nonce_key)) {
+			wp_die();
+		}
+
+		if (!empty($couponCode = $_POST['couponCode'])) {
+
+			if ( WC()->cart->has_discount($couponCode)) {
+				return;
+			}
+			
+			WC()->cart->apply_coupon($couponCode);
+
+			$cartData = $this->get_cart_data();
+
+			// Return the response
+			$JSONResponse = array(
+				'lineItems' => $cartData['cartItems'],
+				'total' => $cartData['cartTotal']
+			);
+
+			wp_send_json_success($JSONResponse);
+
+		}
+		
+		wp_send_json_success(['error' => 'Missing shipping contact']);
+
+	}
+
+	/**
 	 * Get shopping cart items and totals
 	 *
 	 * This function will recalculate the shopping 
@@ -1044,7 +1081,7 @@ HTML;
 	 * 
 	 * returns Array
 	 */
-	public function get_cart_data() 
+	protected function get_cart_data() 
 	{
 	
 		// Recalculate cart totals.
@@ -1252,7 +1289,6 @@ HTML;
 		// Hash the signature string and the key together
 		return hash('SHA512', $ret . $key);
 	}
-
 	/**
 	 * Process Refund
 	 *
@@ -1262,30 +1298,92 @@ HTML;
 	 * @param Interger        $amount
 	 * @param Float         $amount
 	 */
-	public function process_refund($order_id, $amount = null, $reason = '')
+	public function process_refund($orderID, $amount = null, $reason = '')
 	{
-		$order = wc_get_order($order_id);
 
+		// Get the transaction XREF from the order ID and the amount.
+		$order = wc_get_order($orderID);
+		$transactionXref = $order->get_transaction_id();
+		$amountToRefund = \P3\SDK\AmountHelper::calculateAmountByCurrency($amount, $order->get_currency());
+
+		// Check the order can be refunded.
 		if (!$this->can_refund_order($order)) {
 			return new WP_Error('error', __('Refund failed.', 'woocommerce'));
 		}
 
-		try {
+		// Query the transaction state.
+		$queryPayload = [
+			'merchantID' => $this->settings['merchantID'],
+			'xref' => $transactionXref,
+			'action' => 'QUERY',
+		];
 
-			$gateway = new Gateway(
-				$this->defaultMerchantID,
-				$this->defaultMerchantSignature,
-				$this->defaultGatewayURL
-			);
+		// Sign the request and send to gateway.
+		//$queryPayload['signature'] = $this->gateway->sign($queryPayload, $this->settings['signature']);
+		$transaction = $this->gateway->directRequest($queryPayload);
 
-			$amountByCurrency = \P3\SDK\AmountHelper::calculateAmountByCurrency($amount, $order->get_currency());
-			$data = $gateway->refundRequest($order->get_transaction_id(), $amountByCurrency);
-			$order->add_order_note($data['message']);
-
-			return true;
-		} catch (Exception $exception) {
-			return new WP_Error('error', $exception->getMessage());
+		if (empty($transaction['state'])) {
+			return new WP_Error('error', "Could not get the transaction state for {$transactionXref}");
 		}
+
+		if ($transaction['responseCode'] == 65558) {
+			return new WP_Error('error', "IP blocked primary");
+		}
+
+		// Build the refund request
+		$refundRequest = [
+			'merchantID' => $this->merchantID,
+			'xref' => $transactionXref,
+		];
+
+		switch ($transaction['state']) {
+			case 'approved':
+			case 'captured':
+				// If amount to refund is equal to the total amount captured/approved then action is cancel.				
+				if($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
+					$refundRequest['action'] = 'CANCEL';
+				} else {
+					$refundRequest['action'] = 'CAPTURE';
+					$refundRequest['amount'] = ($transaction['amountReceived'] - $amountToRefund);
+				}
+				break;
+
+			case 'accepted':
+				$refundRequest = array_merge($refundRequest, [
+					'action' => 'REFUND_SALE',
+					'amount' => $amountToRefund,
+				]);
+				break;
+				
+			default:
+				return new WP_Error('error', "Transaction {$transactionXref} it not in a refundable state.");
+		}
+
+		// Sign the refund request and sign it.
+		$refundRequest['signature'] = $this->gateway->sign($refundRequest,$this->settings['signature']);
+		$refundResponse = $this->directRequest($refundRequest);
+
+		// Handle the refund response
+		if (empty($refundResponse) && empty($refundResponse['responseCode'])) {
+		
+			return new WP_Error('error', "Could not refund {$transactionXref}.");
+		
+		} else {
+			
+			$orderMessage = ($refundResponse['responseCode'] == "0" ? "Refund Successful" : "Refund Unsuccessful") . "<br/><br/>";
+
+			$state = $refundResponse['state'] ?? null;
+
+			if ($state != 'canceled') {
+				$orderMessage .= "Amount Refunded: " . (isset($refundResponse['amountReceived']) ? number_format($refundResponse['amountReceived'] / pow(10, $refundResponse['currencyExponent']), $refundResponse['currencyExponent']) : "None") . "<br/><br/>";
+			}
+
+			$order->add_order_note($data['message']);
+			return true;
+
+		}
+		
+		return new WP_Error('error', "Could not refund {$transactionXref}.");
 	}
 
 	/**

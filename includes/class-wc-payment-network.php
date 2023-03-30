@@ -417,33 +417,106 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		return $this->process_response_callback($response);
 	}
 
-	public function process_refund($order_id, $amount = null, $reason = '')
+	/**
+	 * Process Refund
+	 *
+	 * Refunds a settled transactions or cancels
+	 * one not yet settled.
+	 *
+	 * @param Interger        $amount
+	 * @param Float         $amount
+	 */
+	public function process_refund($orderID, $amount = null, $reason = '')
 	{
-		$this->debug_log('INFO', "Processing refund for order {$order_id} for the amount {$amount} and the reason {$reason}");
 
-		$order = wc_get_order($order_id);
+		// Get the transaction XREF from the order ID and the amount.
+		$order = wc_get_order($orderID);
+		$transactionXref = $order->get_transaction_id();
+		$amountToRefund = \P3\SDK\AmountHelper::calculateAmountByCurrency($amount, $order->get_currency());
 
+		// Check the order can be refunded.
 		if (!$this->can_refund_order($order)) {
 			return new WP_Error('error', __('Refund failed.', 'woocommerce'));
 		}
 
-		try {
-			$amountByCurrency = \P3\SDK\AmountHelper::calculateAmountByCurrency($amount, $order->get_currency());
+		// Query the transaction state.
+		$queryPayload = [
+			'merchantID' => $this->settings['merchantID'],
+			'xref' => $transactionXref,
+			'action' => 'QUERY',
+		];
 
-			$data = $this->gateway->refundRequest($order->get_transaction_id(), $amountByCurrency);
+		// Sign the request and send to gateway.
+		//$queryPayload['signature'] = $this->gateway->sign($queryPayload, $this->settings['signature']);
+		$transaction = $this->gateway->directRequest($queryPayload);
+
+		if (empty($transaction['state'])) {
+			return new WP_Error('error', "Could not get the transaction state for {$transactionXref}");
+		}
+
+		if ($transaction['responseCode'] == 65558) {
+			return new WP_Error('error', "IP blocked primary");
+		}
+
+		// Build the refund request
+		$refundRequest = [
+			'merchantID' => $this->merchantID,
+			'xref' => $transactionXref,
+		];
+
+		switch ($transaction['state']) {
+			case 'approved':
+			case 'captured':
+				// If amount to refund is equal to the total amount captured/approved then action is cancel.				
+				if($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
+					$refundRequest['action'] = 'CANCEL';
+				} else {
+					$refundRequest['action'] = 'CAPTURE';
+					$refundRequest['amount'] = ($transaction['amountReceived'] - $amountToRefund);
+				}
+				break;
+
+			case 'accepted':
+				$refundRequest = array_merge($refundRequest, [
+					'action' => 'REFUND_SALE',
+					'amount' => $amountToRefund,
+				]);
+				break;
+				
+			default:
+				return new WP_Error('error', "Transaction {$transactionXref} it not in a refundable state.");
+		}
+
+		// Sign the refund request and sign it.
+		$refundRequest['signature'] = $this->gateway->sign($refundRequest,$this->settings['signature']);
+		$refundResponse = $this->directRequest($refundRequest);
+
+		// Handle the refund response
+		if (empty($refundResponse) && empty($refundResponse['responseCode'])) {
+		
+			return new WP_Error('error', "Could not refund {$transactionXref}.");
+		
+		} else {
+			
+			$orderMessage = ($refundResponse['responseCode'] == "0" ? "Refund Successful" : "Refund Unsuccessful") . "<br/><br/>";
+
+			$state = $refundResponse['state'] ?? null;
+
+			if ($state != 'canceled') {
+				$orderMessage .= "Amount Refunded: " . (isset($refundResponse['amountReceived']) ? number_format($refundResponse['amountReceived'] / pow(10, $refundResponse['currencyExponent']), $refundResponse['currencyExponent']) : "None") . "<br/><br/>";
+			}
 
 			$order->add_order_note($data['message']);
-
 			return true;
-		} catch (Exception $exception) {
-			return new WP_Error('error', $exception->getMessage());
+
 		}
+		
+		return new WP_Error('error', "Could not refund {$transactionXref}.");
 	}
 
 	/**
 	 * receipt_page
 	 */
-
 	public function receipt_page($order)
 	{
 		if (in_array($this->settings['type'], ['hosted', 'hosted_v2', 'hosted_v3'])) {
