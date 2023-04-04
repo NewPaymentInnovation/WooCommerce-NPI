@@ -267,8 +267,8 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 				"<div id=\"certs-saved-container\" class=\"cert-saved-error\"><label id=\"certificate-saved-error-label\">Certificates save error: {$certificateSaveResult['error']}</label></div>");
 		} else {
 			$certificateSetupStatus = (openssl_x509_check_private_key($currentSavedCertData, array($currentSavedCertKey, $currentSavedKeyPassword)) ?
-			'<label class="cert-message cert-message-valid">Certificate, key and password saved are all valid</label>' :
-			'<label class="cert-message cert-validation-error">Certificate, key and password are not valid or saved</label>');
+				'<label class="cert-message cert-message-valid">Certificate, key and password saved are all valid</label>' :
+				'<label class="cert-message cert-validation-error">Certificate, key and password are not valid or saved</label>');
 		}
 
 		// Plugin settings field HTML.
@@ -614,7 +614,6 @@ HTML;
 		$JSONResponse['message'] = ($JSONResponse['paymentComplete'] ? 'Approved' : 'Declined');
 
 		wp_send_json_success($JSONResponse);
-		
 	}
 
 	/**
@@ -824,7 +823,6 @@ HTML;
 
 			$shippingAmountTotal = $order->get_shipping_total();
 			$cartTotal = $order->get_total();
-	
 		} else {
 
 			$cart = WC()->cart;
@@ -909,7 +907,7 @@ HTML;
 
 		// Check if any coupons are avaialble (therfore enabled)
 		// If so add support for them to Apple Pay.
-		if(empty(WC()->cart->get_applied_coupons())) {
+		if (empty(WC()->cart->get_applied_coupons())) {
 			$applePayRequest['supportsCouponCode'] = true;
 		}
 
@@ -925,7 +923,6 @@ HTML;
 
 		wp_send_json_success($applePayRequest);
 		wp_die();
-
 	}
 
 	/**
@@ -948,7 +945,7 @@ HTML;
 			// New cart data will be needed in a response.
 			$shippingMethodSelected = json_decode(stripslashes_deep($_POST['shippingMethodSelected']));
 			WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected->identifier));
-			
+
 			WC()->cart->calculate_shipping();
 			WC()->cart->calculate_totals();
 
@@ -960,7 +957,6 @@ HTML;
 				'lineItems' => $cartData['cartItems'],
 				'total' => $cartData['cartTotal'],
 			);
-
 		} else {
 			$JSONResponse = array(
 				'status' => false,
@@ -968,7 +964,6 @@ HTML;
 		}
 
 		wp_send_json_success($JSONResponse);
-
 	}
 
 	/**
@@ -1021,13 +1016,13 @@ HTML;
 		);
 
 		wp_send_json_success($JSONResponse);
-
 	}
 
 	/**
 	 * Apple a coupon code from ApplePay 
 	 */
-	public function apply_coupon_code() {
+	public function apply_coupon_code()
+	{
 
 		if (!wp_verify_nonce($_POST['securitycode'], $this->nonce_key)) {
 			wp_die();
@@ -1038,7 +1033,7 @@ HTML;
 			if (WC()->cart->has_discount($couponCode)) {
 				return;
 			}
-			
+
 			WC()->cart->apply_coupon($couponCode);
 
 			$cartData = $this->get_cart_data();
@@ -1050,11 +1045,9 @@ HTML;
 			);
 
 			wp_send_json_success($JSONResponse);
-
 		}
-		
-		wp_send_json_success(['error' => 'Missing shipping contact']);
 
+		wp_send_json_success(['error' => 'Missing shipping contact']);
 	}
 
 	/**
@@ -1070,9 +1063,9 @@ HTML;
 	 * 
 	 * returns Array
 	 */
-	protected function get_cart_data() 
+	protected function get_cart_data()
 	{
-	
+
 		// Recalculate cart totals.
 		WC()->cart->calculate_shipping();
 		WC()->cart->calculate_totals();
@@ -1083,21 +1076,21 @@ HTML;
 
 		$cart = WC()->cart;
 
-			foreach ($cart->cart_contents as $item) {
-				array_push(
-					$cartContents,
-					array(
-						'title' => $item['data']->get_title(),
-						'quantity' => $item['quantity'],
-						'price' => $item['data']->get_price(),
-						'product_id' => $item['product_id'],
-					)
-				);
-			}
+		foreach ($cart->cart_contents as $item) {
+			array_push(
+				$cartContents,
+				array(
+					'title' => $item['data']->get_title(),
+					'quantity' => $item['quantity'],
+					'price' => $item['data']->get_price(),
+					'product_id' => $item['product_id'],
+				)
+			);
+		}
 
-			$shippingAmountTotal = $cart->get_shipping_total();
-			$cartTotal = $cart->total;
-		
+		$shippingAmountTotal = $cart->get_shipping_total();
+		$cartTotal = $cart->total;
+
 
 		// Apple Pay request line items.
 		$lineItems = array();
@@ -1278,6 +1271,7 @@ HTML;
 		// Hash the signature string and the key together
 		return hash('SHA512', $ret . $key);
 	}
+
 	/**
 	 * Process Refund
 	 *
@@ -1308,7 +1302,6 @@ HTML;
 		];
 
 		// Sign the request and send to gateway.
-		//$queryPayload['signature'] = $this->gateway->sign($queryPayload, $this->settings['signature']);
 		$transaction = $this->gateway->directRequest($queryPayload);
 
 		if (empty($transaction['state'])) {
@@ -1321,7 +1314,7 @@ HTML;
 
 		// Build the refund request
 		$refundRequest = [
-			'merchantID' => $this->merchantID,
+			'merchantID' => $this->settings['merchantID'],
 			'xref' => $transactionXref,
 		];
 
@@ -1343,37 +1336,34 @@ HTML;
 					'amount' => $amountToRefund,
 				]);
 				break;
-				
+
 			default:
 				return new WP_Error('error', "Transaction {$transactionXref} it not in a refundable state.");
 		}
 
-		// Sign the refund request and sign it.
-		$refundRequest['signature'] = $this->gateway->sign($refundRequest,$this->settings['signature']);
-		$refundResponse = $this->directRequest($refundRequest);
+		$refundResponse = $this->gateway->directRequest($refundRequest);
 
 		// Handle the refund response
 		if (empty($refundResponse) && empty($refundResponse['responseCode'])) {
-		
+
 			return new WP_Error('error', "Could not refund {$transactionXref}.");
-		
 		} else {
-			
+
 			$orderMessage = ($refundResponse['responseCode'] == "0" ? "Refund Successful" : "Refund Unsuccessful") . "<br/><br/>";
 
 			$state = $refundResponse['state'] ?? null;
 
 			if ($state != 'canceled') {
-				$orderMessage .= "Amount Refunded: " . (isset($refundResponse['amountReceived']) ? number_format($refundResponse['amountReceived'] / pow(10, $refundResponse['currencyExponent']), $refundResponse['currencyExponent']) : "None") . "<br/><br/>";
+				$orderMessage .= "Amount Refunded: " . number_format($amountToRefund / pow(10, $refundResponse['currencyExponent']), $refundResponse['currencyExponent']) . "<br/><br/>";
 			}
 
-			$order->add_order_note($data['message']);
+			$order->add_order_note($orderMessage);
 			return true;
-
 		}
-		
+
 		return new WP_Error('error', "Could not refund {$transactionXref}.");
 	}
+
 
 	/**
 	 * Hook to process a subscription payment

@@ -439,16 +439,21 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			return new WP_Error('error', __('Refund failed.', 'woocommerce'));
 		}
 
+		$gateway = new Gateway(
+			$this->defaultMerchantID,
+			$this->defaultMerchantSignature,
+			$this->defaultGatewayURL
+		);
+
 		// Query the transaction state.
 		$queryPayload = [
-			'merchantID' => $this->settings['merchantID'],
+			'merchantID' => $this->defaultMerchantID,
 			'xref' => $transactionXref,
 			'action' => 'QUERY',
 		];
 
 		// Sign the request and send to gateway.
-		//$queryPayload['signature'] = $this->gateway->sign($queryPayload, $this->settings['signature']);
-		$transaction = $this->gateway->directRequest($queryPayload);
+		$transaction = $gateway->directRequest($queryPayload);
 
 		if (empty($transaction['state'])) {
 			return new WP_Error('error', "Could not get the transaction state for {$transactionXref}");
@@ -460,7 +465,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 
 		// Build the refund request
 		$refundRequest = [
-			'merchantID' => $this->merchantID,
+			'merchantID' => $this->defaultMerchantID,
 			'xref' => $transactionXref,
 		];
 
@@ -482,35 +487,32 @@ class WC_Payment_Network extends WC_Payment_Gateway
 					'amount' => $amountToRefund,
 				]);
 				break;
-				
+
 			default:
 				return new WP_Error('error', "Transaction {$transactionXref} it not in a refundable state.");
 		}
 
 		// Sign the refund request and sign it.
-		$refundRequest['signature'] = $this->gateway->sign($refundRequest,$this->settings['signature']);
-		$refundResponse = $this->directRequest($refundRequest);
+		$refundResponse = $gateway->directRequest($refundRequest);
 
 		// Handle the refund response
 		if (empty($refundResponse) && empty($refundResponse['responseCode'])) {
-		
+
 			return new WP_Error('error', "Could not refund {$transactionXref}.");
-		
 		} else {
-			
+
 			$orderMessage = ($refundResponse['responseCode'] == "0" ? "Refund Successful" : "Refund Unsuccessful") . "<br/><br/>";
 
 			$state = $refundResponse['state'] ?? null;
 
 			if ($state != 'canceled') {
-				$orderMessage .= "Amount Refunded: " . (isset($refundResponse['amountReceived']) ? number_format($refundResponse['amountReceived'] / pow(10, $refundResponse['currencyExponent']), $refundResponse['currencyExponent']) : "None") . "<br/><br/>";
+				$orderMessage .= "Amount Refunded: " . number_format($amountToRefund / pow(10, $refundResponse['currencyExponent']), $refundResponse['currencyExponent']) . "<br/><br/>";
 			}
 
-			$order->add_order_note($data['message']);
+			$order->add_order_note($orderMessage);
 			return true;
-
 		}
-		
+
 		return new WP_Error('error', "Could not refund {$transactionXref}.");
 	}
 
