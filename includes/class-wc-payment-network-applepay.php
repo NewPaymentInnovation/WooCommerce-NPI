@@ -249,9 +249,6 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 			}
 		}
 
-		// Check if Apple pay certificates have already been saved.
-		$currentSavedCertData = get_option($optionPrefix . 'merchantCert');
-		$currentSavedCertKey = get_option($optionPrefix . 'merchantCertKey');
 		// The key password is stored in settings.
 		$currentSavedKeyPassword = $this->settings['merchant_cert_key_password'];
 
@@ -259,17 +256,21 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		$certificateSetupStatus = '';
 
 		// Check for files to store. If no files to store then check current saved files.
-		if (!empty($_FILES['merchantCertFile']['tmp_name']) && !empty($_FILES['merchantCertKey']['tmp_name'])) {
+		if ((isset($_FILES['merchantCertFile']['tmp_name']) &&  isset($_FILES['merchantCertKey']['tmp_name'])) && 
+			(!empty($_FILES['merchantCertFile']['tmp_name']) || !empty($_FILES['merchantCertKey']['tmp_name']))) {
 
 			$certificateSaveResult = $this->store_merchant_certificates($_FILES, $currentSavedKeyPassword);
 			$certificateSaveResultHTML = ($certificateSaveResult['saved'] ?
 				"<div id=\"certs-saved-container\" class=\"cert-saved\"><label id=\"certificate-saved-label\">Certificates saved</label></div>" :
 				"<div id=\"certs-saved-container\" class=\"cert-saved-error\"><label id=\"certificate-saved-error-label\">Certificates save error: {$certificateSaveResult['error']}</label></div>");
-		} else {
-			$certificateSetupStatus = (openssl_x509_check_private_key($currentSavedCertData, array($currentSavedCertKey, $currentSavedKeyPassword)) ?
-				'<label class="cert-message cert-message-valid">Certificate, key and password saved are all valid</label>' :
-				'<label class="cert-message cert-validation-error">Certificate, key and password are not valid or saved</label>');
-		}
+		} 
+
+		// Check if Apple pay certificates have been saved and valid.
+		$currentSavedCertData = get_option($optionPrefix . 'merchantCert');
+		$currentSavedCertKey = get_option($optionPrefix . 'merchantCertKey');
+		$certificateSetupStatus = (openssl_x509_check_private_key($currentSavedCertData, array($currentSavedCertKey, $currentSavedKeyPassword)) ?
+		'<label class="cert-message cert-message-valid">Certificate, key and password saved are all valid</label>' :
+		'<label class="cert-message cert-validation-error">Certificate, key and password are not valid or saved</label>');
 
 		// Plugin settings field HTML.
 		$pluginSettingFieldsHTML = '<table class="form-table">' . $this->generate_settings_html(null, false) . '</table>';
@@ -280,7 +281,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		{$pluginSettingFieldsHTML}
 		<hr>
 		<h1 id="apple-pay-merchant-cert-setup-header">Apple Pay merchant certificate setup</h1>
-		<p><label>Current Certificate setup status: </label>{$certificateSetupStatus}</p>
+		<p><label>Current certificate setup status: </label>{$certificateSetupStatus}</p>
 		<div>
 		<div id="upload-cert-message">Upload new certificate and key  <img id="upload-cert-help-icon" src="{$this->pluginURL}/assets/img/help-icon.png" alt="CSR file download"></div>
 		<div id="apple-pay-cert-key-upload-container">
@@ -614,6 +615,7 @@ HTML;
 		$JSONResponse['message'] = ($JSONResponse['paymentComplete'] ? 'Approved' : 'Declined');
 
 		wp_send_json_success($JSONResponse);
+		
 	}
 
 	/**
@@ -823,6 +825,7 @@ HTML;
 
 			$shippingAmountTotal = $order->get_shipping_total();
 			$cartTotal = $order->get_total();
+	
 		} else {
 
 			$cart = WC()->cart;
@@ -907,7 +910,7 @@ HTML;
 
 		// Check if any coupons are avaialble (therfore enabled)
 		// If so add support for them to Apple Pay.
-		if (empty(WC()->cart->get_applied_coupons())) {
+		if(empty(WC()->cart->get_applied_coupons())) {
 			$applePayRequest['supportsCouponCode'] = true;
 		}
 
@@ -923,6 +926,7 @@ HTML;
 
 		wp_send_json_success($applePayRequest);
 		wp_die();
+
 	}
 
 	/**
@@ -939,13 +943,13 @@ HTML;
 		}
 
 		// Check there is a shipping method selected being posted.
-		if (!empty($_POST['shippingMethodSelected'])) {
+		if(!empty($_POST['shippingMethodSelected'])) {
 
 			// If the selected method is not a string then it's the Apple Pay UI updating. 
 			// New cart data will be needed in a response.
 			$shippingMethodSelected = json_decode(stripslashes_deep($_POST['shippingMethodSelected']));
 			WC()->session->set('chosen_shipping_methods', array($shippingMethodSelected->identifier));
-
+			
 			WC()->cart->calculate_shipping();
 			WC()->cart->calculate_totals();
 
@@ -957,6 +961,7 @@ HTML;
 				'lineItems' => $cartData['cartItems'],
 				'total' => $cartData['cartTotal'],
 			);
+
 		} else {
 			$JSONResponse = array(
 				'status' => false,
@@ -964,6 +969,7 @@ HTML;
 		}
 
 		wp_send_json_success($JSONResponse);
+
 	}
 
 	/**
@@ -1016,13 +1022,13 @@ HTML;
 		);
 
 		wp_send_json_success($JSONResponse);
+
 	}
 
 	/**
 	 * Apple a coupon code from ApplePay 
 	 */
-	public function apply_coupon_code()
-	{
+	public function apply_coupon_code() {
 
 		if (!wp_verify_nonce($_POST['securitycode'], $this->nonce_key)) {
 			wp_die();
@@ -1030,10 +1036,10 @@ HTML;
 
 		if (!empty($couponCode = $_POST['couponCode'])) {
 
-			if (WC()->cart->has_discount($couponCode)) {
+			if ( WC()->cart->has_discount($couponCode)) {
 				return;
 			}
-
+			
 			WC()->cart->apply_coupon($couponCode);
 
 			$cartData = $this->get_cart_data();
@@ -1045,9 +1051,11 @@ HTML;
 			);
 
 			wp_send_json_success($JSONResponse);
-		}
 
+		}
+		
 		wp_send_json_success(['error' => 'Missing shipping contact']);
+
 	}
 
 	/**
@@ -1063,9 +1071,9 @@ HTML;
 	 * 
 	 * returns Array
 	 */
-	protected function get_cart_data()
+	protected function get_cart_data() 
 	{
-
+	
 		// Recalculate cart totals.
 		WC()->cart->calculate_shipping();
 		WC()->cart->calculate_totals();
@@ -1076,21 +1084,21 @@ HTML;
 
 		$cart = WC()->cart;
 
-		foreach ($cart->cart_contents as $item) {
-			array_push(
-				$cartContents,
-				array(
-					'title' => $item['data']->get_title(),
-					'quantity' => $item['quantity'],
-					'price' => $item['data']->get_price(),
-					'product_id' => $item['product_id'],
-				)
-			);
-		}
+			foreach ($cart->cart_contents as $item) {
+				array_push(
+					$cartContents,
+					array(
+						'title' => $item['data']->get_title(),
+						'quantity' => $item['quantity'],
+						'price' => $item['data']->get_price(),
+						'product_id' => $item['product_id'],
+					)
+				);
+			}
 
-		$shippingAmountTotal = $cart->get_shipping_total();
-		$cartTotal = $cart->total;
-
+			$shippingAmountTotal = $cart->get_shipping_total();
+			$cartTotal = $cart->total;
+		
 
 		// Apple Pay request line items.
 		$lineItems = array();
@@ -1271,7 +1279,7 @@ HTML;
 		// Hash the signature string and the key together
 		return hash('SHA512', $ret . $key);
 	}
-
+	
 	/**
 	 * Process Refund
 	 *
@@ -1294,15 +1302,21 @@ HTML;
 			return new WP_Error('error', __('Refund failed.', 'woocommerce'));
 		}
 
+		$gateway = new Gateway(
+			$this->defaultMerchantID,
+			$this->defaultMerchantSignature,
+			$this->defaultGatewayURL
+		);
+
 		// Query the transaction state.
 		$queryPayload = [
-			'merchantID' => $this->settings['merchantID'],
+			'merchantID' => $this->defaultMerchantID,
 			'xref' => $transactionXref,
 			'action' => 'QUERY',
 		];
 
 		// Sign the request and send to gateway.
-		$transaction = $this->gateway->directRequest($queryPayload);
+		$transaction = $gateway->directRequest($queryPayload);
 
 		if (empty($transaction['state'])) {
 			return new WP_Error('error', "Could not get the transaction state for {$transactionXref}");
@@ -1314,7 +1328,7 @@ HTML;
 
 		// Build the refund request
 		$refundRequest = [
-			'merchantID' => $this->settings['merchantID'],
+			'merchantID' => $this->defaultMerchantID,
 			'xref' => $transactionXref,
 		];
 
@@ -1322,7 +1336,7 @@ HTML;
 			case 'approved':
 			case 'captured':
 				// If amount to refund is equal to the total amount captured/approved then action is cancel.				
-				if ($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
+				if($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
 					$refundRequest['action'] = 'CANCEL';
 				} else {
 					$refundRequest['action'] = 'CAPTURE';
@@ -1336,19 +1350,21 @@ HTML;
 					'amount' => $amountToRefund,
 				]);
 				break;
-
+				
 			default:
 				return new WP_Error('error', "Transaction {$transactionXref} it not in a refundable state.");
 		}
 
-		$refundResponse = $this->gateway->directRequest($refundRequest);
+		// Sign the refund request and sign it.
+		$refundResponse = $gateway->directRequest($refundRequest);
 
 		// Handle the refund response
 		if (empty($refundResponse) && empty($refundResponse['responseCode'])) {
-
+		
 			return new WP_Error('error', "Could not refund {$transactionXref}.");
+		
 		} else {
-
+			
 			$orderMessage = ($refundResponse['responseCode'] == "0" ? "Refund Successful" : "Refund Unsuccessful") . "<br/><br/>";
 
 			$state = $refundResponse['state'] ?? null;
@@ -1359,11 +1375,11 @@ HTML;
 
 			$order->add_order_note($orderMessage);
 			return true;
-		}
 
+		}
+		
 		return new WP_Error('error', "Could not refund {$transactionXref}.");
 	}
-
 
 	/**
 	 * Hook to process a subscription payment
