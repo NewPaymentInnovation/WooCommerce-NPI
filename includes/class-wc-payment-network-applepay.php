@@ -256,8 +256,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		$certificateSetupStatus = '';
 
 		// Check for files to store. If no files to store then check current saved files.
-		if ((isset($_FILES['merchantCertFile']['tmp_name']) &&  isset($_FILES['merchantCertKey']['tmp_name'])) && 
-			(!empty($_FILES['merchantCertFile']['tmp_name']) || !empty($_FILES['merchantCertKey']['tmp_name']))) {
+		if (!empty($_FILES['merchantCertFile']['tmp_name']) || !empty($_FILES['merchantCertKey']['tmp_name'])) {
 
 			$certificateSaveResult = $this->store_merchant_certificates($_FILES, $currentSavedKeyPassword);
 			$certificateSaveResultHTML = ($certificateSaveResult['saved'] ?
@@ -910,7 +909,7 @@ HTML;
 
 		// Check if any coupons are avaialble (therfore enabled)
 		// If so add support for them to Apple Pay.
-		if(empty(WC()->cart->get_applied_coupons())) {
+		if (empty(WC()->cart->get_applied_coupons())) {
 			$applePayRequest['supportsCouponCode'] = true;
 		}
 
@@ -943,7 +942,7 @@ HTML;
 		}
 
 		// Check there is a shipping method selected being posted.
-		if(!empty($_POST['shippingMethodSelected'])) {
+		if (!empty($_POST['shippingMethodSelected'])) {
 
 			// If the selected method is not a string then it's the Apple Pay UI updating. 
 			// New cart data will be needed in a response.
@@ -1036,7 +1035,7 @@ HTML;
 
 		if (!empty($couponCode = $_POST['couponCode'])) {
 
-			if ( WC()->cart->has_discount($couponCode)) {
+			if (WC()->cart->has_discount($couponCode)) {
 				return;
 			}
 			
@@ -1071,7 +1070,7 @@ HTML;
 	 * 
 	 * returns Array
 	 */
-	protected function get_cart_data() 
+	protected function get_cart_data()
 	{
 	
 		// Recalculate cart totals.
@@ -1335,8 +1334,8 @@ HTML;
 		switch ($transaction['state']) {
 			case 'approved':
 			case 'captured':
-				// If amount to refund is equal to the total amount captured/approved then action is cancel.				
-				if($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
+				// If amount to refund is equal to the total amount captured/approved then action is cancel.
+				if ($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
 					$refundRequest['action'] = 'CANCEL';
 				} else {
 					$refundRequest['action'] = 'CAPTURE';
