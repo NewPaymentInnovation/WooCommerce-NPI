@@ -596,8 +596,8 @@ HTML;
 		$order->update_meta_data('gatewayResponse', $gatewayRequestResult);
 		$order->save();
 
-
-		$JSONResponse['paymentComplete'] = false;
+		// Clear shipping selection for backward compatibility.
+		WC()->session->__unset( 'chosen_shipping_methods' );
 
 		if (!isset($gatewayRequestResult['responseCode']) || (int)$gatewayRequestResult['responseCode'] !== 0) {
 
