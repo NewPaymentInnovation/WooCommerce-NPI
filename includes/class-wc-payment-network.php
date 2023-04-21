@@ -46,6 +46,12 @@ class WC_Payment_Network extends WC_Payment_Gateway
 	 */
 	protected static $logging_options;
 
+	/**
+	 * Module version
+	 * @var String
+	 */
+	protected static $module_version;
+
 	public function __construct()
 	{
 		$configs = include(dirname(__FILE__) . '/../config.php');
@@ -56,6 +62,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		$this->icon					= plugins_url('/', dirname(__FILE__)) . 'assets/img/logo.png';
 		$this->method_title			= __($configs['default']['gateway_title'], $this->lang);
 		$this->method_description	= __($configs['default']['method_description'], $this->lang);
+		$this->module_version		= __($configs['module']['version'], $this->lang);
 
 		$this->supports = array(
 			'subscriptions',
@@ -335,6 +342,8 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			FORM;
 
 			wp_enqueue_style('gateway-credit-card-styles', plugins_url('assets/css/gateway.css', dirname(__FILE__)));
+
+			echo "<!-- WC Module Version: {$this->moduleVersion} -->";
 		}
 	}
 
