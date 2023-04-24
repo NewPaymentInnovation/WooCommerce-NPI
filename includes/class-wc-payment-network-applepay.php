@@ -268,8 +268,8 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		$currentSavedCertData = get_option($optionPrefix . 'merchantCert');
 		$currentSavedCertKey = get_option($optionPrefix . 'merchantCertKey');
 		$certificateSetupStatus = (openssl_x509_check_private_key($currentSavedCertData, array($currentSavedCertKey, $currentSavedKeyPassword)) ?
-			'<label class="cert-message cert-message-valid">Certificate, key and password saved are all valid</label>' :
-			'<label class="cert-message cert-validation-error">Certificate, key and password are not valid or saved</label>');
+		'<label class="cert-message cert-message-valid">Certificate, key and password saved are all valid</label>' :
+		'<label class="cert-message cert-validation-error">Certificate, key and password are not valid or saved</label>');
 
 		// Plugin settings field HTML.
 		$pluginSettingFieldsHTML = '<table class="form-table">' . $this->generate_settings_html(null, false) . '</table>';
