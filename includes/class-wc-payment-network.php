@@ -343,8 +343,11 @@ class WC_Payment_Network extends WC_Payment_Gateway
 
 			wp_enqueue_style('gateway-credit-card-styles', plugins_url('assets/css/gateway.css', dirname(__FILE__)));
 
-			echo "<!-- WC Module Version: {$this->moduleVersion} -->";
 		}
+
+		// Output Module version as HTML comment on checkout page.
+		echo "<!-- WC Module Version: {$this->moduleVersion} -->";
+		
 	}
 
 	public function validate_fields()
