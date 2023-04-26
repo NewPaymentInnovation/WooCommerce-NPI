@@ -346,7 +346,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		}
 
 		// Output Module version as HTML comment on checkout page.
-		echo "<!-- WC Module Version: {$this->moduleVersion} -->";
+		echo "<!-- WC Module Version: {$this->module_version} -->";
 		
 	}
 
