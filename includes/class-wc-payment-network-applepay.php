@@ -113,10 +113,13 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		// Enqueue Admin scripts when in plugin settings.
 		add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
 
+		add_action('woocommerce_proceed_to_checkout', array($this, 'payment_fields'));
+
 		if ($mainModuleSettings['enabled'] == "no") {
 			$this->enabled = "no";
 		}
 	}
+
 
 	/**
 	 * Generate CSR and private key
@@ -283,67 +286,67 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		$pluginSettingFieldsHTML = '<table class="form-table">' . $this->generate_settings_html(null, false) . '</table>';
 
 		$adminPageHTML = <<<HTML
-        {$certificateSaveResultHTML}
-        <h1>{$this->method_title} - Apple Pay settings</h1>
-        {$pluginSettingFieldsHTML}
-        <hr>
-        <h1 id="apple-pay-merchant-cert-setup-header">Apple Pay merchant certificate setup</h1>
-        <p><label>Current certificate setup status: </label>{$certificateSetupStatus}</p>
-        <div>
-        <div id="upload-cert-message">Upload new certificate and key  <img id="upload-cert-help-icon" src="{$this->pluginURL}/assets/img/help-icon.png" alt="CSR file download"></div>
-        <div id="apple-pay-cert-key-upload-container">
-        <div id ="merchant-cert-upload-label">Merchant certificate file upload</div>
-        <input type="file" id="merchantCertUpload" name="merchantCertFile"/>
-        <div id ="merchant-cert-upload-label">Merchant certificate key</div>
-        <input type="file" id="merchantCertKeyUpload" name="merchantCertKey"/>
-        </div>
-        <div id="certificate-help-window">
-        <img id="close-help-window-icon" class="close-help-window-icon" src="{$this->pluginURL}/assets/img/close-window-icon.png" alt="Close help window">
-        <h2 style="text-decoration: underline;">Apple Pay merchant identity certificate</h2>
-        <p>To obtain an Apple Pay <em>merchant identity</em> you must have enrolled in the
-        <a href="https://developer.apple.com/programs/" target="_blank" rel=" noopener noreferrer nofollow" data-disabled="">Apple Developer Program</a>
-         and <a href="https://help.apple.com/developer-account/#/devb2e62b839?sub=dev103e030bb" target="_blank" rel=" noopener noreferrer nofollow">
-        created a unique Apple Pay merchant identifier</a>.</p>
-        <p>The merchant identity is associated with your merchant identifier and used to identify the merchant in SSL communications.
-        The certificate expires every 25 months. If the certificate is revoked, you can recreate it. You will also need to setup a payment processing certificates
-        with the payment gateway before the Apple Pay button is fully functional.</p>
-        <p><b>You must generate your own CSR when creating a <em>merchant identity certificate</em> for the payment module.
-        <a href="https://help.apple.com/developer-account/#/devbfa00fef7" target="_blank" rel=" noopener noreferrer nofollow"></a>.</b></p>
-        <ol>
-            <li><p>Open the <a href="https://developer.apple.com/account/resources" target="_blank" rel=" noopener noreferrer nofollow" data-disabled="">Apple Developer Certificates, Identifiers &amp; Profiles</a> webpage and select 'Identifiers' from the sidebar.</p></li>
-            <li><p>Under 'Identifiers', select 'Merchant IDs' using the filter in the top-right.</p></li>
-            <li><p>On the right, select your merchant identifier.</p></li>
-            <li><p>Under 'Apple Pay Merchant Identity Certificate', click 'Create Certificate'.</p></li>
-            <li><p>Use a CSR you have generated to upload. If you do not have a CSR then click the button below to generate one.</p></li>
-            <li><p>Click 'Choose File' and select the CSR you just downloaded.</p></li>
-            <li><p>Click 'Continue'.</p></li>
-            <li><p>Click 'Download' to download the <em>merchant identity certificate</em> and save to a file.</p></li>
-            <li><p>Along with the key file generated with the CSR, upload the CER file download from Apple Pay</p></li>
-            <li><p>Update the password in the settings</p></li>
-            <li><p>Click the save button.</p></li>
-        </ol>
-        <button class="merchant-cert-gen-button" type="button" id="merchant-cert-gen-button">Generate CSR and key</button>
-        <br>
-        <div id="generated-certs-container">
-        <label>Files ready to download.</label>
-            <div id="downloadable-cert-and-key-container">
-                <div id="csrdownloadicon">
-                        <a id="csrdownloadhref" href="link">
-                        <img src="{$this->pluginURL}/assets/img/certification-icon.png" alt="CSR file download">
-                        <br>
-                        <label>CSR Certificate file</label>
-                        </a>
-                    </div>
-                    <div id="keydownloadicon">
-                        <a id="keydownloadhref" href="link">
-                        <img src="{$this->pluginURL}/assets/img/certification-icon.png" alt="Key file download">
-                        <br>
-                        <label>Certificate key file</label>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
+		{$certificateSaveResultHTML}
+		<h1>{$this->method_title} - Apple Pay settings</h1>
+		{$pluginSettingFieldsHTML}
+		<hr>
+		<h1 id="apple-pay-merchant-cert-setup-header">Apple Pay merchant certificate setup</h1>
+		<p><label>Current certificate setup status: </label>{$certificateSetupStatus}</p>
+		<div>
+		<div id="upload-cert-message">Upload new certificate and key  <img id="upload-cert-help-icon" src="{$this->pluginURL}/assets/img/help-icon.png" alt="CSR file download"></div>
+		<div id="apple-pay-cert-key-upload-container">
+		<div id ="merchant-cert-upload-label">Merchant certificate file upload</div>
+		<input type="file" id="merchantCertUpload" name="merchantCertFile"/>
+		<div id ="merchant-cert-upload-label">Merchant certificate key</div>
+		<input type="file" id="merchantCertKeyUpload" name="merchantCertKey"/>
+		</div>
+		<div id="certificate-help-window">
+		<img id="close-help-window-icon" class="close-help-window-icon" src="{$this->pluginURL}/assets/img/close-window-icon.png" alt="Close help window">
+		<h2 style="text-decoration: underline;">Apple Pay merchant identity certificate</h2>
+		<p>To obtain an Apple Pay <em>merchant identity</em> you must have enrolled in the
+		<a href="https://developer.apple.com/programs/" target="_blank" rel=" noopener noreferrer nofollow" data-disabled="">Apple Developer Program</a>
+		 and <a href="https://help.apple.com/developer-account/#/devb2e62b839?sub=dev103e030bb" target="_blank" rel=" noopener noreferrer nofollow">
+		created a unique Apple Pay merchant identifier</a>.</p>
+		<p>The merchant identity is associated with your merchant identifier and used to identify the merchant in SSL communications.
+		The certificate expires every 25 months. If the certificate is revoked, you can recreate it. You will also need to setup a payment processing certificates
+		with the payment gateway before the Apple Pay button is fully functional.</p>
+		<p><b>You must generate your own CSR when creating a <em>merchant identity certificate</em> for the payment module.
+		<a href="https://help.apple.com/developer-account/#/devbfa00fef7" target="_blank" rel=" noopener noreferrer nofollow"></a>.</b></p>
+		<ol>
+			<li><p>Open the <a href="https://developer.apple.com/account/resources" target="_blank" rel=" noopener noreferrer nofollow" data-disabled="">Apple Developer Certificates, Identifiers &amp; Profiles</a> webpage and select 'Identifiers' from the sidebar.</p></li>
+			<li><p>Under 'Identifiers', select 'Merchant IDs' using the filter in the top-right.</p></li>
+			<li><p>On the right, select your merchant identifier.</p></li>
+			<li><p>Under 'Apple Pay Merchant Identity Certificate', click 'Create Certificate'.</p></li>
+			<li><p>Use a CSR you have generated to upload. If you do not have a CSR then click the button below to generate one.</p></li>
+			<li><p>Click 'Choose File' and select the CSR you just downloaded.</p></li>
+			<li><p>Click 'Continue'.</p></li>
+			<li><p>Click 'Download' to download the <em>merchant identity certificate</em> and save to a file.</p></li>
+			<li><p>Along with the key file generated with the CSR, upload the CER file download from Apple Pay</p></li>
+			<li><p>Update the password in the settings</p></li>
+			<li><p>Click the save button.</p></li>
+		</ol>
+		<button class="merchant-cert-gen-button" type="button" id="merchant-cert-gen-button">Generate CSR and key</button>
+		<br>
+		<div id="generated-certs-container">
+		<label>Files ready to download.</label>
+			<div id="downloadable-cert-and-key-container">
+				<div id="csrdownloadicon">
+						<a id="csrdownloadhref" href="link">
+						<img src="{$this->pluginURL}/assets/img/certification-icon.png" alt="CSR file download">
+						<br>
+						<label>CSR Certificate file</label>
+						</a>
+					</div>
+					<div id="keydownloadicon">
+						<a id="keydownloadhref" href="link">
+						<img src="{$this->pluginURL}/assets/img/certification-icon.png" alt="Key file download">
+						<br>
+						<label>Certificate key file</label>
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
 HTML;
 
 		echo $adminPageHTML;
@@ -897,47 +900,7 @@ HTML;
 		}
 
 		// Apple Pay request line items.
-		$lineItems = array();
-
-		// Add the shipping amount to the request.
-		array_push($lineItems, array('label' => 'Shipping', 'amount' => $shippingAmountTotal));
-
-		// For each item in the cart add to line items.
-		foreach ($cartContents as $item) {
-
-			$itemTitle = $item['title'];
-			$itemPrice = $item['price'];
-			$itemQuantity = $item['quantity'];
-
-			$productID = wc_get_product($item['product_id']);
-			if (class_exists('WC_Subscriptions_Product') && WC_Subscriptions_Product::is_subscription($productID)) {
-
-				$firstPaymentDate = (WC_Subscriptions_Product::get_trial_expiration_date($productID)
-					? WC_Subscriptions_Product::get_trial_expiration_date($productID) : date('Y-m-d'));
-
-				$subscriptionItem = array(
-					'label' => "{$itemTitle}",
-					'amount' => $itemPrice,
-					'recurringPaymentStartDate' => $firstPaymentDate,
-					'recurringPaymentIntervalUnit' => WC_Subscriptions_Product::get_period($productID),
-					'paymentTiming' => 'recurring',
-				);
-
-				// Add recurring cost if first payment is today,
-				if (WC_Subscriptions_Product::get_trial_expiration_date($productID)) {
-					$amountToPay = ($amountToPay + $itemPrice);
-				}
-
-				if ($signUpFee = WC_Subscriptions_Product::get_sign_up_fee($productID)) {
-					array_push($lineItems, array('label' => "{$itemTitle} Sign up fee ", 'amount' => $signUpFee));
-				}
-
-				// Add sub
-				array_push($lineItems, $subscriptionItem);
-			} else {
-				array_push($lineItems, array('label' => "{$itemQuantity} x {$itemTitle}", 'amount' => ($itemPrice * $itemQuantity)));
-			}
-		}
+		$lineItems =  $this->get_cart_data()['cartItems'];
 
 		$applePayRequest = array(
 			'currencyCode' => get_woocommerce_currency(),
@@ -1164,18 +1127,31 @@ HTML;
 			$itemQuantity = $item['quantity'];
 
 			$productID = wc_get_product($item['product_id']);
+
+
 			if (class_exists('WC_Subscriptions_Product') && WC_Subscriptions_Product::is_subscription($productID)) {
 
 				$firstPaymentDate = (WC_Subscriptions_Product::get_trial_expiration_date($productID)
 					? WC_Subscriptions_Product::get_trial_expiration_date($productID) : date('Y-m-d'));
 
+				$recurringPaymentIntervalUnit = WC_Subscriptions_Product::get_period($productID);
+				$recurringPaymentIntervalCount = WC_Subscriptions_Product::get_interval($productID);
+
 				$subscriptionItem = array(
 					'label' => "{$itemTitle}",
 					'amount' => $itemPrice,
 					'recurringPaymentStartDate' => $firstPaymentDate,
-					'recurringPaymentIntervalUnit' => WC_Subscriptions_Product::get_period($productID),
+					'recurringPaymentIntervalUnit' => $recurringPaymentIntervalUnit,
 					'paymentTiming' => 'recurring',
+					'recurringPaymentIntervalCount' => $recurringPaymentIntervalCount,
 				);
+
+				// Detect if subsription is a week and conver to 7 days.
+				// ApplePayRecurringPaymentDateUnit only accepts minute, hour, day, month or year.
+				if (($recurringPaymentIntervalUnit = WC_Subscriptions_Product::get_period($productID)) == 'week') {
+					$subscriptionItem['recurringPaymentIntervalUnit'] = 'day';
+					$subscriptionItem['recurringPaymentIntervalCount'] = $recurringPaymentIntervalCount * 7;
+				}
 
 				// Add recurring cost if first payment is today,
 				if (WC_Subscriptions_Product::get_trial_expiration_date($productID)) {
@@ -1261,31 +1237,30 @@ HTML;
 	public function payment_fields()
 	{
 		echo <<<EOS
-        <style>
-        #applepay-button {
-            width: auto;
-            height: 60px;
-            border-radius: 5px;
-            background-repeat: no-repeat;
-            background-size: 80%;
-            background-image: -webkit-named-image(apple-pay-logo-white);
-            background-position: 50% 50%;
-            background-color: black;
-            margin: auto;
-            cursor: pointer;
-        }
-        </style>
-        <div id="applepay-button-container" style="display: none;" >
-            <div id="applepay-button" onclick="applePayButtonClicked()"> </div>
-        </div>
-        <div id="applepay-not-available-message" style="display: none;">
-            <label>Apple Pay is not available on this device.</label>
-        </div>
-        <div id="applepay-not-setup" style="display: none;">
-            <label>Apple pay is not setup on this device.</label>
-        </div>
-        <a href="https://www.apple.com/apple-pay/" target="_blank" style="padding-top: 10px;">What is Apple Pay?</a>
-        EOS;
+		<style>
+		#applepay-button {
+			width: auto;
+			height: 60px;
+			border-radius: 5px;
+			background-repeat: no-repeat;
+			background-size: 80%;
+			background-image: -webkit-named-image(apple-pay-logo-white);
+			background-position: 50% 50%;
+			background-color: black;
+			margin: auto;
+			cursor: pointer;
+		}
+		</style>
+		<div id="applepay-button-container" style="display: none;" >
+			<div id="applepay-button" onclick="applePayButtonClicked()"> </div>
+		</div>
+		<div id="applepay-not-available-message" style="display: none;">
+			<label>Apple Pay is not available on this device.</label>
+		</div>
+		<div id="applepay-not-setup" style="display: none;">
+			<label>Apple pay is not setup on this device.</label>
+		</div>
+		EOS;
 	}
 
 	/**
