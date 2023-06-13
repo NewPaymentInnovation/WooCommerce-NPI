@@ -113,7 +113,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		// Enqueue Admin scripts when in plugin settings.
 		add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
 
-		add_action('woocommerce_proceed_to_checkout', array($this, 'payment_fields'));
+		add_action('woocommerce_proceed_to_checkout', array($this, 'cart_page_ap'));
 
 		if ($mainModuleSettings['enabled'] == "no") {
 			$this->enabled = "no";
@@ -1153,10 +1153,10 @@ HTML;
 					$subscriptionItem['recurringPaymentIntervalCount'] = $recurringPaymentIntervalCount * 7;
 				}
 
-				// Add recurring cost if first payment is today,
-				if (WC_Subscriptions_Product::get_trial_expiration_date($productID)) {
-					$amountToPay = ($amountToPay + $itemPrice);
-				}
+				// // Add recurring cost if first payment is today,
+				// if (WC_Subscriptions_Product::get_trial_expiration_date($productID)) {
+				// 	$amountToPay = ($amountToPay + $itemPrice) ?? 0;
+				// }
 
 				if ($signUpFee = WC_Subscriptions_Product::get_sign_up_fee($productID)) {
 					array_push($lineItems, array('label' => "{$itemTitle} Sign up fee ", 'amount' => $signUpFee));
@@ -1261,6 +1261,30 @@ HTML;
 			<label>Apple pay is not setup on this device.</label>
 		</div>
 		EOS;
+	}
+
+	/**
+	 * Cart page Apple Pay
+	 *
+	 * Allows the Apple Pay button to appear on the cart page
+	 * If a subscription is in the cart and the user is not logged in
+	 * the button will not appear as they have to be logged in to 
+	 * sign up.
+	 */
+	public function cart_page_ap()
+	{
+
+		if (class_exists('WC_Subscriptions_Product')) {
+			$cart = WC()->cart;
+
+			foreach ($cart->cart_contents as $item) {
+				// If subscrition, setup.
+				if (WC_Subscriptions_Product::is_subscription($item['product_id']) && !is_user_logged_in()) {
+					return false;
+				}
+			}
+		}
+		$this->payment_fields();
 	}
 
 	/**

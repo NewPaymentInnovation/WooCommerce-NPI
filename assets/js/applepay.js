@@ -12,6 +12,10 @@ window.onload = function () {
 		getApplePayButton();
 	});
 
+	jQuery(document.body).on("updated_shipping_method", function () {
+		getApplePayButton();
+	});
+
 	function getApplePayButton() {
 		if (isApplePayEnabled() && canMakeApplePayPayments()) {
 			log('Apple Pay enabled and can make payments');
