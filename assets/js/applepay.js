@@ -8,14 +8,6 @@ window.onload = function () {
 
 	getApplePayButton();
 
-	jQuery(document.body).on("updated_checkout", function () {
-		getApplePayButton();
-	});
-
-	jQuery(document.body).on("updated_shipping_method", function () {
-		getApplePayButton();
-	});
-
 	function getApplePayButton() {
 		if (isApplePayEnabled() && canMakeApplePayPayments()) {
 			log('Apple Pay enabled and can make payments');
@@ -29,6 +21,21 @@ window.onload = function () {
 			}).catch(function (err) {
 				log("session.onvalidatemerchant - failure: ", err);
 			});
+
+			// Add event listeners if Apple Pay is enabled.
+
+			jQuery(document.body).on("updated_checkout", function () {
+				getApplePayButton();
+			});
+		
+			jQuery(document.body).on("updated_shipping_method", function () {
+				getApplePayButton();
+			});
+		
+			jQuery(document.body).on("updated_wc_div", function () {
+				window.location.reload();
+			});
+
 		} else if (isApplePayEnabled() && !canMakeApplePayPayments()) {
 			log('Apple  Pay enabled but cant make payment');
 			window.document.getElementById("applepay-not-setup").style.display = "block";

@@ -1146,17 +1146,12 @@ HTML;
 					'recurringPaymentIntervalCount' => $recurringPaymentIntervalCount,
 				);
 
-				// Detect if subsription is a week and conver to 7 days.
+				// Detect if subscription is a week and convert to 7 days.
 				// ApplePayRecurringPaymentDateUnit only accepts minute, hour, day, month or year.
 				if (($recurringPaymentIntervalUnit = WC_Subscriptions_Product::get_period($productID)) == 'week') {
 					$subscriptionItem['recurringPaymentIntervalUnit'] = 'day';
 					$subscriptionItem['recurringPaymentIntervalCount'] = $recurringPaymentIntervalCount * 7;
 				}
-
-				// // Add recurring cost if first payment is today,
-				// if (WC_Subscriptions_Product::get_trial_expiration_date($productID)) {
-				// 	$amountToPay = ($amountToPay + $itemPrice) ?? 0;
-				// }
 
 				if ($signUpFee = WC_Subscriptions_Product::get_sign_up_fee($productID)) {
 					array_push($lineItems, array('label' => "{$itemTitle} Sign up fee ", 'amount' => $signUpFee));
