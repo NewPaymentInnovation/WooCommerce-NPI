@@ -1253,7 +1253,7 @@ HTML;
 			<label>Apple Pay is not available on this device.</label>
 		</div>
 		<div id="applepay-not-setup" style="display: none;">
-			<label>Apple pay is not setup on this device.</label>
+			<label>Apple Pay is not setup on this device.</label>
 		</div>
 		EOS;
 	}
@@ -1273,7 +1273,7 @@ HTML;
 			$cart = WC()->cart;
 
 			foreach ($cart->cart_contents as $item) {
-				// If subscrition, setup.
+				// If subscription setup.
 				if (WC_Subscriptions_Product::is_subscription($item['product_id']) && !is_user_logged_in()) {
 					return false;
 				}
