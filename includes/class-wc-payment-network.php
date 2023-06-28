@@ -46,19 +46,23 @@ class WC_Payment_Network extends WC_Payment_Gateway
 	 */
 	protected static $logging_options;
 
+	/**
+	 * Module version
+	 * @var String
+	 */
+	protected static $module_version;
+
 	public function __construct()
 	{
 		$configs = include(dirname(__FILE__) . '/../config.php');
 
-		$this->has_fields          				 = false;
-		$this->id                  				 = str_replace(' ', '', strtolower($configs['gateway_title']));
-		$this->lang                				 = strtolower('woocommerce_' . $this->id);
-		$this->icon                				 = plugins_url('/', dirname(__FILE__)) . 'assets/img/logo.png';
-		$this->method_title        				 = __($configs['gateway_title'], $this->lang);
-		$this->method_description  				 = __($configs['method_description'], $this->lang);
-		$this->default_merchant_id 				 = $configs['default_merchant_id'];
-		$this->default_secret      				 = $configs['default_secret'];
-		$this->default_merchant_country_code 	 = $configs['default_merchant_country_code'];
+		$this->has_fields			= false;
+		$this->id					= str_replace(' ', '', strtolower($configs['default']['gateway_title']));
+		$this->lang					= strtolower('woocommerce_' . $this->id);
+		$this->icon					= plugins_url('/', dirname(__FILE__)) . 'assets/img/logo.png';
+		$this->method_title			= __($configs['default']['gateway_title'], $this->lang);
+		$this->method_description	= __($configs['default']['method_description'], $this->lang);
+		$this->module_version		= __($configs['module']['version'], $this->lang);
 
 		$this->supports = array(
 			'subscriptions',
@@ -77,7 +81,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		$this->init_settings();
 
 		// Get setting values
-		$this->title			 	 	= $this->settings['title'];
+		$this->title					= $this->settings['title'];
 		$this->description				= $this->settings['description'];
 		$this->merchant_signature_key	= $this->settings['signature'];
 		static::$logging_options		= (empty($this->settings['logging_options']) ? null : array_flip(array_map('strtoupper', $this->settings['logging_options'])));
@@ -95,7 +99,6 @@ class WC_Payment_Network extends WC_Payment_Gateway
 
 		add_action('woocommerce_api_wc_' . $this->id, array($this, 'process_response_callback'));
 		add_action('woocommerce_scheduled_subscription_payment_' . $this->id, array($this, 'process_scheduled_subscription_payment_callback'), 10, 3);
-		
 	}
 
 	/**
@@ -230,10 +233,10 @@ class WC_Payment_Network extends WC_Payment_Gateway
 				'deviceTimeZone'			=> '0',
 				'deviceCapabilities'		=> '',
 				'deviceScreenResolution'	=> '1x1x1',
-				'deviceAcceptContent'		=> (isset($_SERVER['HTTP_ACCEPT']) ? htmlentities($_SERVER['HTTP_ACCEPT']) : null),
-				'deviceAcceptEncoding'		=> (isset($_SERVER['HTTP_ACCEPT_ENCODING']) ? htmlentities($_SERVER['HTTP_ACCEPT_ENCODING']) : null),
-				'deviceAcceptLanguage'		=> (isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? htmlentities($_SERVER['HTTP_ACCEPT_LANGUAGE']) : null),
-				'deviceAcceptCharset'		=> (isset($_SERVER['HTTP_ACCEPT_CHARSET']) ? htmlentities($_SERVER['HTTP_ACCEPT_CHARSET']) : null),
+				'deviceAcceptContent'		=> (isset($_SERVER['HTTP_ACCEPT']) ? htmlentities($_SERVER['HTTP_ACCEPT']) : '*/*'),
+				'deviceAcceptEncoding'		=> (isset($_SERVER['HTTP_ACCEPT_ENCODING']) ? htmlentities($_SERVER['HTTP_ACCEPT_ENCODING']) : '*'),
+				'deviceAcceptLanguage'		=> (isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? htmlentities($_SERVER['HTTP_ACCEPT_LANGUAGE']) : 'en-gb;q=0.001'),
+
 			];
 
 			$browserInfo = '';
@@ -245,7 +248,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			$generateMonthOptions = function () use ($parameters) {
 				$str = '';
 				foreach (range(1, 12) as $value) {
-					$s = $parameters['cardExpiryMonth'] == $value ? 'selected' : '';
+					$s = $parameters['cardExpiryMonth'] == ($value ? 'selected' : '');
 					$str .= '<option value="' . str_pad($value, 2, '0', STR_PAD_LEFT) . '" ' . $s . '>' . $value . '</option>' . "\n";
 				}
 
@@ -255,7 +258,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			$generateYearOptions = function () use ($parameters) {
 				$str = '';
 				foreach (range(date('Y'), date('Y') + 12) as $value) {
-					$s = $parameters['cardExpiryYear'] == $value ? 'selected' : '';
+					$s = $parameters['cardExpiryYear'] == ($value ? 'selected' : '');
 					$str .= '<option value="' . substr($value, 2) . '" ' . $s . '>' . $value . '</option>' . "\n";
 				}
 
@@ -339,7 +342,12 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			FORM;
 
 			wp_enqueue_style('gateway-credit-card-styles', plugins_url('assets/css/gateway.css', dirname(__FILE__)));
+
 		}
+
+		// Output Module version as HTML comment on checkout page.
+		echo "<!-- WC Module Version: {$this->module_version} -->";
+		
 	}
 
 	public function validate_fields()
@@ -421,33 +429,108 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		return $this->process_response_callback($response);
 	}
 
-	public function process_refund($order_id, $amount = null, $reason = '')
+	/**
+	 * Process Refund
+	 *
+	 * Refunds a settled transactions or cancels
+	 * one not yet settled.
+	 *
+	 * @param Interger        $amount
+	 * @param Float         $amount
+	 */
+	public function process_refund($orderID, $amount = null, $reason = '')
 	{
-		$this->debug_log('INFO', "Processing refund for order {$order_id} for the amount {$amount} and the reason {$reason}");
 
-		$order = wc_get_order($order_id);
+		// Get the transaction XREF from the order ID and the amount.
+		$order = wc_get_order($orderID);
+		$transactionXref = $order->get_transaction_id();
+		$amountToRefund = \P3\SDK\AmountHelper::calculateAmountByCurrency($amount, $order->get_currency());
 
+		// Check the order can be refunded.
 		if (!$this->can_refund_order($order)) {
 			return new WP_Error('error', __('Refund failed.', 'woocommerce'));
 		}
 
-		try {
-			$amountByCurrency = \P3\SDK\AmountHelper::calculateAmountByCurrency($amount, $order->get_currency());
+		$gateway = new Gateway(
+			$this->defaultMerchantID,
+			$this->defaultMerchantSignature,
+			$this->defaultGatewayURL
+		);
 
-			$data = $this->gateway->refundRequest($order->get_transaction_id(), $amountByCurrency);
+		// Query the transaction state.
+		$queryPayload = [
+			'merchantID' => $this->defaultMerchantID,
+			'xref' => $transactionXref,
+			'action' => 'QUERY',
+		];
 
-			$order->add_order_note($data['message']);
+		// Sign the request and send to gateway.
+		$transaction = $gateway->directRequest($queryPayload);
 
-			return true;
-		} catch (Exception $exception) {
-			return new WP_Error('error', $exception->getMessage());
+		if (empty($transaction['state'])) {
+			return new WP_Error('error', "Could not get the transaction state for {$transactionXref}");
 		}
+
+		if ($transaction['responseCode'] == 65558) {
+			return new WP_Error('error', "IP blocked primary");
+		}
+
+		// Build the refund request
+		$refundRequest = [
+			'merchantID' => $this->defaultMerchantID,
+			'xref' => $transactionXref,
+		];
+
+		switch ($transaction['state']) {
+			case 'approved':
+			case 'captured':
+				// If amount to refund is equal to the total amount captured/approved then action is cancel.				
+				if ($transaction['amountReceived'] === $amountToRefund || ($transaction['amountReceived'] - $amountToRefund <= 0)) {
+					$refundRequest['action'] = 'CANCEL';
+				} else {
+					$refundRequest['action'] = 'CAPTURE';
+					$refundRequest['amount'] = ($transaction['amountReceived'] - $amountToRefund);
+				}
+				break;
+
+			case 'accepted':
+				$refundRequest = array_merge($refundRequest, [
+					'action' => 'REFUND_SALE',
+					'amount' => $amountToRefund,
+				]);
+				break;
+
+			default:
+				return new WP_Error('error', "Transaction {$transactionXref} it not in a refundable state.");
+		}
+
+		// Sign the refund request and sign it.
+		$refundResponse = $gateway->directRequest($refundRequest);
+
+		// Handle the refund response
+		if (empty($refundResponse) && empty($refundResponse['responseCode'])) {
+
+			return new WP_Error('error', "Could not refund {$transactionXref}.");
+		} else {
+
+			$orderMessage = ($refundResponse['responseCode'] == "0" ? "Refund Successful" : "Refund Unsuccessful") . "<br/><br/>";
+
+			$state = $refundResponse['state'] ?? null;
+
+			if ($state != 'canceled') {
+				$orderMessage .= "Amount Refunded: " . number_format($amountToRefund / pow(10, $refundResponse['currencyExponent']), $refundResponse['currencyExponent']) . "<br/><br/>";
+			}
+
+			$order->add_order_note($orderMessage);
+			return true;
+		}
+
+		return new WP_Error('error', "Could not refund {$transactionXref}.");
 	}
 
 	/**
 	 * receipt_page
 	 */
-
 	public function receipt_page($order)
 	{
 		if (in_array($this->settings['type'], ['hosted', 'hosted_v2', 'hosted_v3'])) {
@@ -510,7 +593,8 @@ class WC_Payment_Network extends WC_Payment_Gateway
 	/**
 	 * On 3DS required
 	 */
-	public function on_threeds_required($res) {
+	public function on_threeds_required($res)
+	{
 
 		setcookie('threeDSRef',  $res['threeDSRef'], [
 			'expires' => time() + 600,
@@ -522,13 +606,12 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		]);
 
 		if (isset($_GET['3dsResponse'])) {
-			
+
 			// Echo out the ACS form that will auto submit and then stop executing immediately after.
 			echo Gateway::silentPost($res['threeDSURL'], $res['threeDSRequest']);
 			wp_die();
-
 		} else {
-		
+
 			return [
 				'result' => 'success',
 				'redirect' => add_query_arg(
@@ -707,7 +790,6 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			$order->add_order_note(__(ucwords($this->method_title) . '- Duplicate Response!' . $order_notes, $this->lang));
 			// Redirect customer to order page.
 			$this->redirect($this->get_return_url($order));
-
 		} else if ($order->is_paid()) {
 
 			// Increase duplicate_payment_response_count by one if the inter
@@ -735,16 +817,13 @@ class WC_Payment_Network extends WC_Payment_Gateway
 
 			$this->debug_log('INFO', "Payment for order {$response['orderRef']} was successful");
 			$this->on_order_success($response);
-
 		} else if ((int)$response['responseCode'] === 65802) {
 
 			return $this->on_threeds_required($response);
-
 		} else {
 			$this->debug_log('INFO', "Payment for order {$response['orderRef']} failed");
 			$this->process_error('Payment failed', $response);
 		}
-		
 	}
 
 	##########################
@@ -891,7 +970,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 
 		//when the wallets is enabled, the user is logged in and there is a wallet ID in the response.
 		if ($this->settings['customerWalletsEnabled'] === 'Y' && isset($response['walletID']) && $order->get_user_id() != 0) {
-			$wallet_table_name = $wpdb->prefix . 'woocommerce_' . 'payment_network_' . 'wallets';
+			$wallet_table_name = $wpdb->prefix . 'woocommerce_payment_network_wallets';
 
 			$customersWalletID = $wpdb->get_var(
 				$wpdb->prepare(
@@ -973,7 +1052,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		}
 
 		// if our payment gateway is disabled, we do not have to enqueue JS too
-		if ('no' === $this->enabled) {
+		if ($this->enabled === 'no') {
 			return;
 		}
 
@@ -990,9 +1069,8 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		// If logging is not null and $type isin logging verbose selection.
 		if (isset(static::$logging_options[$type])) {
 			wc_get_logger()->{$type}(print_r($logMessage, true) . print_r($objects, true), array('source' => $this->title));
-		}	
+		}
 		// If logging_options empty.
 		return;
 	}
-	
 }

@@ -1,0 +1,196 @@
+div#generated-certs-container {
+	display: none;
+}
+
+div#csrdownloadicon,
+div#keydownloadicon {
+	background-image: url("../img/file-download-icon.png");
+	background-repeat: no-repeat;
+	cursor: pointer;
+}
+
+div#gen_cert_label {
+	width: 330px;
+	border: 1px solid #b9b9b9;
+	background-color: #e5fbfb;
+	padding: 6px;
+	text-shadow: 0 0 black;
+	box-shadow: 2px 2px 7px 0px;
+}
+
+div#keydownloadicon {
+	text-align: center;
+}
+
+div#apple-pay-cert-key-upload-container {
+	padding-top: 20px;
+}
+
+img#upload-cert-help-icon {
+	display: inline;
+	cursor: pointer;
+	width: 20px;
+}
+
+div#certificate-help-window {
+	display: none;
+	border: 1px solid black;
+	border-radius: 8px;
+	width: 500px;
+	max-width: 500px;
+	background-color: white;
+	position: absolute;
+	z-index: 99999;
+	margin: auto;
+	padding: 10px;
+	-webkit-box-shadow: 10px 10px 20px -10px rgba(0, 0, 0, 0.75);
+	-moz-box-shadow: 10px 10px 20px -10px rgba(0, 0, 0, 0.75);
+	box-shadow: 10px 10px 20px -10px rgba(0, 0, 0, 0.75);
+	animation: fadeIn 0.5s linear;
+}
+
+div#downloadable-cert-and-key-container {
+	padding-top: 20px;
+	display: flex;
+	animation: fade 0.5s linear;
+}
+
+img#close-help-window-icon {
+	float: right;
+	cursor: pointer;
+	margin-top: 10px;
+}
+
+div#certificate-help-window {
+	left: 3%;
+	top: 20%;
+}
+
+div#csrdownloadicon {
+	padding-right: 20px;
+	text-align: center;
+}
+
+label#certificate-saved-error-label {
+	color: rgb(0, 0, 0);
+	font-size: larger
+}
+
+h1#apple-pay-merchant-cert-setup-header {
+	margin-bottom: 9px;
+}
+
+div#apple-pay-cert-key-upload-container {
+	border: 1px solid black;
+	width: fit-content;
+	padding: 13px;
+	margin-top: 10px;
+	border-radius: 5px;
+	background-color: #ececec;
+}
+
+div#certs-saved-container {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	/* border-left-width: 4px; */
+	box-shadow: 0 1px 1px rgb(0 0 0 / 4%);
+	padding: 5px 12px 0px;
+	height: 30px;
+}
+
+.cert-saved-error {
+	border-left-color: red !important;
+	border-left-width: 4px !important;
+}
+
+.cert-saved {
+	border-left-color: rgb(36, 146, 78) !important;
+	border-left-width: 4px !important;
+}
+
+div#upload-cert-message {
+	color: rgb(0, 0, 255);
+	font-size: larger;
+}
+
+div#merchant-cert-upload-label {
+	padding-top: 5px;
+	font-size: larger;
+	padding-bottom: 5px;
+}
+
+.cert-message-valid {
+	color: green;
+}
+
+.cert-validation-error {
+	color: red
+}
+
+.merchant-cert-gen-button {
+	height: 35px;
+	text-align: left;
+}
+
+.button--loading::after {
+	content: " ";
+	position: absolute;
+	width: 16px;
+	height: 16px;
+	margin: auto;
+	border: 4px solid transparent;
+	border-top-color: #000000;
+	border-radius: 50%;
+	animation: button-loading-spinner 1s ease infinite;
+}
+
+
+
+@keyframes fadeIn {
+	0% {
+		opacity: 0.2;
+	}
+
+	50% {
+		opacity: 0.5;
+	}
+
+	100% {
+		opacity: 1;
+	}
+}
+
+@keyframes fadeOut {
+	0% {
+		opacity: 0.7;
+	}
+
+	50% {
+		opacity: 0.5;
+	}
+
+	100% {
+		opacity: 0;
+	}
+}
+
+@keyframes rotate {
+	0% {
+		transform: rotate(0deg);
+	}
+
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+
+@keyframes button-loading-spinner {
+	from {
+		transform: rotate(0turn);
+	}
+
+	to {
+		transform: rotate(1turn);
+	}
+}
