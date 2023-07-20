@@ -8,6 +8,7 @@ return [
 	'applepay' => [
 		'method_description' => 'Apple Pay description',
 		'title' => 'Apple Pay',
+		'gateway_validation_available' => true,
 	],
 	'module' => [
 		'version' => '3.0.0'
