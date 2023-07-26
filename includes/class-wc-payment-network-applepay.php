@@ -256,7 +256,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 
 		if (($this->gatewayMerchantValidation === 'no' && $this->gatewayValidationAvailable) || $this->gatewayValidationAvailable === false) {
 
-			$this->form_fields =  array_merge($this->form_fields, [
+			$this->form_fields = array_merge($this->form_fields, [
 				'merchant_display_name' => array(
 					'title' => __('Merchant display name.', $this->lang),
 					'type' => 'text',
