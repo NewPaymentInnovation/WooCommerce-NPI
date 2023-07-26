@@ -78,4 +78,6 @@ You will then need to select an integration type to use.
 
 The module will also need to be enabled so it appears as a payment option on the checkout.
 
-For gateway based Apple Pay setup, change gateway_validation_available in the config to true.
+**NOTE:**
+ The gateway_validation_available flag should only be set to true if your Gateway Merchant ID has been enabled for Apple Pay. Enabling it without gateway configuration could result in issues with transactions. 
+ 
