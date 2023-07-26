@@ -228,7 +228,6 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 				'description' => __('This controls the title which the user sees during checkout.', $this->lang),
 				'default' => __('Apple pay', $this->lang),
 			),
-
 			'logging_options' => array(
 				'title'       => __('Logging', $this->lang),
 				'type'        => 'multiselect',
@@ -244,14 +243,13 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 			),
 		);
 
-
 		if ($this->gatewayValidationAvailable) {
-			$this->form_fields =  array_merge($this->form_fields, [
+			$this->form_fields = array_merge($this->form_fields, [
 				'gateway_merchant_validation' => array(
 					'title' => __('Gateway merchant validation', $this->lang),
 					'type' => 'checkbox',
 					'default' => 'yes',
-					'description' => __('Disable to use your own merchant certificate', $this->lang),
+					'description' => __('Disable to use your own Apple Pay developer account and merchant certificates. After saving new options will appear.', $this->lang),
 				),
 			]);
 		}
@@ -395,7 +393,7 @@ HTML;
 				</div>
 			</div>
 		</div>
-		HTML;
+HTML;
 
 		echo $adminPageHTML;
 
@@ -508,7 +506,7 @@ HTML;
 				'domainName' => $apwDomainName,
 			);
 
-			$gatewayRequest['signature'] =	$this->createSignature($gatewayRequest, $this->defaultMerchantSignature);
+			$gatewayRequest['signature'] = $this->createSignature($gatewayRequest, $this->defaultMerchantSignature);
 
 			$this->debug_log('DEBUG', "Gateway verification request", $gatewayRequest);
 
@@ -559,26 +557,22 @@ HTML;
 
 				$data = '{"merchantIdentifier":"' . $apwMerchantIdentifier . '", "domainName":"' . $apwDomainName . '", "displayName":"' . $apwDisplayName . '"}';
 
-				$ch = curl_init();
+				$curlOptions = array(
+					CURLOPT_SSLCERT => $tempCertFilePath,
+					CURLOPT_SSLKEY => $tempCertFileKeyPath,
+					CURLOPT_SSLKEYPASSWD => $certficiateKeyPassword,
+				);
 
-				curl_setopt($ch, CURLOPT_URL, $validationURL);
-				curl_setopt($ch, CURLOPT_SSLCERT, $tempCertFilePath);
-				curl_setopt($ch, CURLOPT_SSLKEY, $tempCertFileKeyPath);
-				curl_setopt($ch, CURLOPT_SSLKEYPASSWD, $certficiateKeyPassword);
-				curl_setopt($ch, CURLOPT_POST, 1);
-				curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+				// Send request to Apple.
+				$response = $this->send_to($validationURL, $data, $curlOptions);
 
-				$response = curl_exec($ch);
-				//Clean up
-				curl_close($ch);
+				// Close the temp cert file and key.
 				fclose($tempCertFile);
 				fclose($tempCertKeyFile);
 
 				$this->debug_log('DEBUG', "Apple verifcation response", $response);
 
 				if ($response === false) {
-					error_log('[ApplePay - Merchant validate][' . time() . '] - Curl failed ' . print_r(curl_error($ch), true));
 					wp_send_json_error();
 				} else {
 					wp_send_json_success($response);
@@ -1512,31 +1506,36 @@ HTML;
 	 * 
 	 * Posts data to a URL useing curl.
 	 */
-	public function send_to($url, $data)
+	public function send_to($url, $data, $options = null, $raw = false)
 	{
 		$ch = curl_init($url);
 		curl_setopt($ch, CURLOPT_POST, true);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $raw ? http_build_query($data) : $data);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+		if (isset($options)) {
+			curl_setopt_array($ch, $options);
+		}
 
 		try {
 			$ret = curl_exec($ch);
 		} catch (\exception $e) {
 			curl_close($ch);
-			throw $e;
+			$this->debug_log('DEBUG', "Curl exception", $e);
 		}
 
 		$curl_info = curl_getinfo($ch);
 		if ($ret === false) {
 			$curl_info['errno'] = $errno = (int)curl_errno($ch);
 			$curl_info['error'] = curl_error($ch);
+			$this->debug_log('DEBUG', "Request error", $curl_info);
 		} else if (isset($curl_info['http_code'])) {
 			$status = (int)$curl_info['http_code'];
 		}
 
 		curl_close($ch);
 		if ($ret === false) {
-			throw new Exception($info['errno']);
+			$this->debug_log('DEBUG', "Request error", $curl_info['errno']);
 		}
 
 		return $ret;

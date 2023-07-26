@@ -77,3 +77,5 @@ a gateway URL i.e. https://gateway.example.com to be entered in the plugin's set
 You will then need to select an integration type to use.
 
 The module will also need to be enabled so it appears as a payment option on the checkout.
+
+For gateway based Apple Pay setup, change gateway_validation_available in the config to true.
