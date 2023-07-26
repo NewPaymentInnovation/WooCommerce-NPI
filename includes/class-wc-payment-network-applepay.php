@@ -1408,7 +1408,7 @@ HTML;
 	 * Refunds a settled transactions or cancels
 	 * one not yet settled.
 	 *
-	 * @param Interger        $amount
+	 * @param Integer        $amount
 	 * @param Float         $amount
 	 */
 	public function process_refund($orderID, $amount = null, $reason = '')
@@ -1488,7 +1488,7 @@ HTML;
 
 			$orderMessage = ($refundResponse['responseCode'] == "0" ? "Refund Successful" : "Refund Unsuccessful") . "<br/><br/>";
 
-			$state = $refundResponse['state'] ?? null;
+			$state = ($refundResponse['state'] ?? null);
 
 			if ($state != 'canceled') {
 				$orderMessage .= "Amount Refunded: " . number_format($amountToRefund / pow(10, $refundResponse['currencyExponent']), $refundResponse['currencyExponent']) . "<br/><br/>";
@@ -1504,13 +1504,13 @@ HTML;
 	/**
 	 * Send To
 	 * 
-	 * Posts data to a URL useing curl.
+	 * Posts data to a URL using curl.
 	 */
-	public function send_to($url, $data, $options = null, $raw = false)
+	public function send_to($url, array $data, array $options = null, bool $raw = false)
 	{
 		$ch = curl_init($url);
 		curl_setopt($ch, CURLOPT_POST, true);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $raw ? http_build_query($data) : $data);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, ($raw ? http_build_query($data) : $data));
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
 		if (isset($options)) {

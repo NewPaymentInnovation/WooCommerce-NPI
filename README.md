@@ -80,4 +80,4 @@ The module will also need to be enabled so it appears as a payment option on the
 
 **NOTE:**
  The gateway_validation_available flag should only be set to true if your Gateway Merchant ID has been enabled for Apple Pay. Enabling it without gateway configuration could result in issues with transactions. 
- 
+
