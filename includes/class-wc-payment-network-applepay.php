@@ -60,8 +60,27 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 	 */
 	protected $pluginURL;
 
+	/**
+	 * Use gateway for merchant validation.
+	 * @var string
+	 */
+	protected $gatewayMerchantValidation;
+
+	/**
+	 * Apple Pay gateway enabled
+	 * @var bool
+	 */
+	protected $gatewayValidationAvailable;
+
+	/**
+	 * Logging ( verbose options )
+	 * @var Array
+	 */
+	protected static $logging_options;
+
 	public function __construct()
 	{
+
 		// Include the module config file.
 		$configs = include dirname(__FILE__) . '/../config.php';
 		$this->pluginURL = plugins_url('/', dirname(__FILE__));
@@ -74,7 +93,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		// $this->icon                       = plugins_url('/', dirname(__FILE__)) . 'assets/img/logo.png';
 		$this->method_title = __($configs['default']['gateway_title'], $this->lang);
 		$this->method_description = __($configs['applepay']['method_description'], $this->lang);
-
+		$this->gatewayValidationAvailable = $configs['applepay']['gateway_validation_available'];
 		// Get main modules settings to use in this sub module.
 		$mainModuleID = str_replace("_applepay", "", $this->id);
 		$mainModuleSettings = get_option('woocommerce_' . $mainModuleID . '_settings');
@@ -98,10 +117,11 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 
 		$this->nonce_key = '12d4c8031f852b9c';
 
-		$this->init_form_fields();
 		$this->init_settings();
 
+		static::$logging_options = (empty($this->settings['logging_options']) ? null : array_flip(array_map('strtoupper', $this->settings['logging_options'])));
 		$this->title = $this->settings['title'];
+		$this->gatewayMerchantValidation = $this->settings['gateway_merchant_validation'];
 
 		// Register hooks.
 		add_action('woocommerce_scheduled_subscription_payment_' . $this->id, array($this, 'process_scheduled_subscription_payment_callback'), 10, 3);
@@ -118,6 +138,8 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		if ($mainModuleSettings['enabled'] == "no") {
 			$this->enabled = "no";
 		}
+
+		$this->init_form_fields();
 	}
 
 
@@ -191,6 +213,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 	 */
 	public function init_form_fields()
 	{
+
 		$this->form_fields = array(
 			'enabled' => array(
 				'title' => __('Enable/Disable', $this->lang),
@@ -205,39 +228,58 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 				'description' => __('This controls the title which the user sees during checkout.', $this->lang),
 				'default' => __('Apple pay', $this->lang),
 			),
-			'merchant_identifier' => array(
-				'title' => __('Merchant identifier', $this->lang),
-				'type' => 'text',
-				'description' => __('The Apple Pay merchant identifier.', $this->lang),
-				'custom_attributes' => array(
-					'required' => true,
+			'logging_options' => array(
+				'title'       => __('Logging', $this->lang),
+				'type'        => 'multiselect',
+				'options' => array(
+					'critical'			=> 'Critical',
+					'error'				=> 'Error',
+					'warning'			=> 'Warning',
+					'notice'			=> 'Notice',
+					'info'				=> 'Info',
+					'debug'				=> 'Debug',
 				),
-			),
-			'merchant_domain_name' => array(
-				'title' => __('Merchant domain', $this->lang),
-				'type' => 'text',
-				'description' => __('The Apple Pay merchant domain.', $this->lang),
-				'custom_attributes' => array(
-					'required' => true,
-				),
-			),
-			'merchant_display_name' => array(
-				'title' => __('Merchant display name.', $this->lang),
-				'type' => 'text',
-				'description' => __('The Apple Pay merchant display name.', $this->lang),
-				'custom_attributes' => array(
-					'required' => true,
-				),
-			),
-			'merchant_cert_key_password' => array(
-				'title' => __('Merchant certificate key password', $this->lang),
-				'type' => 'password',
-				'description' => __('The Apple Pay merchant identifier.', $this->lang),
-				'custom_attributes' => array(
-					'required' => true,
-				),
+				'description' => __('This controls if logging is turned on and how verbose it is. Warning! Logging will take up additional space, especially if Debug is selected.', $this->lang),
 			),
 		);
+
+		if ($this->gatewayValidationAvailable) {
+			$this->form_fields = array_merge($this->form_fields, [
+				'gateway_merchant_validation' => array(
+					'title' => __('Gateway merchant validation', $this->lang),
+					'type' => 'checkbox',
+					'default' => 'yes',
+					'description' => __('Disable to use your own Apple Pay developer account and merchant certificates. After saving new options will appear.', $this->lang),
+				),
+			]);
+		}
+
+		if (($this->gatewayMerchantValidation === 'no' && $this->gatewayValidationAvailable) || $this->gatewayValidationAvailable === false) {
+
+			$this->form_fields = array_merge($this->form_fields, [
+				'merchant_display_name' => array(
+					'title' => __('Merchant display name.', $this->lang),
+					'type' => 'text',
+					'description' => __('The Apple Pay merchant display name.', $this->lang),
+				),
+				'merchant_identifier' => array(
+					'title' => __('Merchant identifier', $this->lang),
+					'type' => 'text',
+					'description' => __('The Apple Pay merchant identifier.', $this->lang),
+					'custom_attributes' => array(
+						'required' => true,
+					),
+				),
+				'merchant_cert_key_password' => array(
+					'title' => __('Merchant certificate key password', $this->lang),
+					'type' => 'password',
+					'description' => __('The Apple Pay merchant identifier.', $this->lang),
+					'custom_attributes' => array(
+						'required' => true,
+					),
+				),
+			]);
+		}
 	}
 
 	/**
@@ -289,6 +331,10 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		{$certificateSaveResultHTML}
 		<h1>{$this->method_title} - Apple Pay settings</h1>
 		{$pluginSettingFieldsHTML}
+
+HTML;
+
+		$certificateSetupHTML = <<<HTML
 		<hr>
 		<h1 id="apple-pay-merchant-cert-setup-header">Apple Pay merchant certificate setup</h1>
 		<p><label>Current certificate setup status: </label>{$certificateSetupStatus}</p>
@@ -350,6 +396,10 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 HTML;
 
 		echo $adminPageHTML;
+
+		if (($this->gatewayMerchantValidation === 'no' && $this->gatewayValidationAvailable) || $this->gatewayValidationAvailable === false) {
+			echo $certificateSetupHTML;
+		}
 	}
 
 	/**
@@ -426,83 +476,111 @@ HTML;
 	 */
 	public function validate_applepay_merchant()
 	{
+		$this->debug_log('INFO', "Validating ApplePay merchant");
+
 		// Check nonce sent in request that called the function is correct.
 		if (!wp_verify_nonce($_POST['securitycode'], $this->nonce_key)) {
 			wp_die();
 		}
 
-		$validation_url = $_POST['validationURL'];
+		$validationURL = $_POST['validationURL'];
 
 		// if no validation URL
-		if (!$validation_url) {
+		if (!$validationURL) {
 			wp_send_json_error();
 			wp_die();
 		}
 
-		$optionPrefix = "woocommerce_{$this->id}_";
-		$certificateData = get_option($optionPrefix . 'merchantCert');
-		$certificatekeyData = get_option($optionPrefix . 'merchantCertKey');
-		$certficiateKeyPassword = $this->settings['merchant_cert_key_password'];
-		$apwMerchantIdentifier = $this->settings['merchant_identifier'];
-		$apwDisplayName = $this->settings['merchant_display_name'];
-		$apwDomainName = $this->settings['merchant_domain_name'];
+		$apwDomainName = $_SERVER['HTTP_HOST'];
 
-		// First check all settings required are present as well as the certificate and key.
-		if (
-			!isset($apwMerchantIdentifier) &&
-			!isset($apwDomainName) &&
-			!isset($apwDisplayName) &&
-			!isset($certificateData) &&
-			!isset($certificatekeyData) &&
-			!isset($certficiateKeyPassword)
-		) {
-			wp_send_json_error();
-			wp_die();
-		}
+		if ($this->gatewayMerchantValidation === 'yes') {
 
-		// Prepare merchant certificate and key file for CURL
+			$this->debug_log('INFO', "Gateway validation method enabled");
 
-		// Merchant certificate.
-		$tempCertFile = tmpfile();
-		fwrite($tempCertFile, $certificateData);
-		$tempCertFilePath = stream_get_meta_data($tempCertFile);
-		$tempCertFilePath = $tempCertFilePath['uri'];
+			// Request validation from gateway.
+			$gatewayRequest = array(
+				'merchantID' => $this->defaultMerchantID,
+				'process' => 'applepay.validateMerchant',
+				'validationURL' => 'https://apple-pay-gateway-cert.apple.com/paymentservices/paymentSession',
+				'displayName' => 'merchant.' . $this->defaultMerchantID,
+				'domainName' => $apwDomainName,
+			);
 
-		// Merchant certificate key.
-		$tempCertKeyFile = tmpfile();
-		fwrite($tempCertKeyFile, $certificatekeyData);
-		$tempCertFileKeyPath = stream_get_meta_data($tempCertKeyFile);
-		$tempCertFileKeyPath = $tempCertFileKeyPath['uri'];
+			$gatewayRequest['signature'] = $this->createSignature($gatewayRequest, $this->defaultMerchantSignature);
 
-		if (($tmp = parse_url($validation_url)) && $tmp['scheme'] === 'https' && substr($tmp['host'], -10) === '.apple.com') {
+			$this->debug_log('DEBUG', "Gateway verification request", $gatewayRequest);
 
-			$data = '{"merchantIdentifier":"' . $apwMerchantIdentifier . '", "domainName":"' . $apwDomainName . '", "displayName":"' . $apwDisplayName . '"}';
+			$gatewayResponse = $this->send_to($this->defaultGatewayURL . '/hosted/', $gatewayRequest);
 
-			$ch = curl_init();
+			$this->debug_log('DEBUG', "Gateway verification request response", $gatewayResponse);
 
-			curl_setopt($ch, CURLOPT_URL, $validation_url);
-			curl_setopt($ch, CURLOPT_SSLCERT, $tempCertFilePath);
-			curl_setopt($ch, CURLOPT_SSLKEY, $tempCertFileKeyPath);
-			curl_setopt($ch, CURLOPT_SSLKEYPASSWD, $certficiateKeyPassword);
-			curl_setopt($ch, CURLOPT_POST, 1);
-			curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-			$response = curl_exec($ch);
-			//Clean up
-			curl_close($ch);
-			fclose($tempCertFile);
-			fclose($tempCertKeyFile);
-
-			if ($response === false) {
-				error_log('[ApplePay - Merchant validate][' . time() . '] - Curl failed ' . print_r(curl_error($ch), true));
-				wp_send_json_error();
-			} else {
-				wp_send_json_success($response);
-			}
+			wp_send_json_success($gatewayResponse);
 		} else {
-			error_log('URL should be SSL or contain apple.com. URL was: ' . $validation_url);
-			wp_send_json_error();
+
+			$this->debug_log('INFO', "Merchant validation method enabled");
+
+			$optionPrefix = "woocommerce_{$this->id}_";
+			$certificateData = get_option($optionPrefix . 'merchantCert');
+			$certificatekeyData = get_option($optionPrefix . 'merchantCertKey');
+			$apwDisplayName = $this->settings['merchant_display_name'];
+			$apwMerchantIdentifier = $this->settings['merchant_identifier'];
+			$certficiateKeyPassword = $this->settings['merchant_cert_key_password'];
+
+			// First check all settings required are present as well as the certificate and key.
+			if (
+				!isset($apwMerchantIdentifier) &&
+				!isset($apwDomainName) &&
+				!isset($apwDisplayName) &&
+				!isset($certificateData) &&
+				!isset($certificatekeyData) &&
+				!isset($certficiateKeyPassword)
+			) {
+				wp_send_json_error();
+				wp_die();
+			}
+
+			// Prepare merchant certificate and key file for CURL
+
+			// Merchant certificate.
+			$tempCertFile = tmpfile();
+			fwrite($tempCertFile, $certificateData);
+			$tempCertFilePath = stream_get_meta_data($tempCertFile);
+			$tempCertFilePath = $tempCertFilePath['uri'];
+
+			// Merchant certificate key.
+			$tempCertKeyFile = tmpfile();
+			fwrite($tempCertKeyFile, $certificatekeyData);
+			$tempCertFileKeyPath = stream_get_meta_data($tempCertKeyFile);
+			$tempCertFileKeyPath = $tempCertFileKeyPath['uri'];
+
+			if (($tmp = parse_url($validationURL)) && $tmp['scheme'] === 'https' && substr($tmp['host'], -10) === '.apple.com') {
+
+				$data = '{"merchantIdentifier":"' . $apwMerchantIdentifier . '", "domainName":"' . $apwDomainName . '", "displayName":"' . $apwDisplayName . '"}';
+
+				$curlOptions = array(
+					CURLOPT_SSLCERT => $tempCertFilePath,
+					CURLOPT_SSLKEY => $tempCertFileKeyPath,
+					CURLOPT_SSLKEYPASSWD => $certficiateKeyPassword,
+				);
+
+				// Send request to Apple.
+				$response = $this->send_to($validationURL, $data, $curlOptions);
+
+				// Close the temp cert file and key.
+				fclose($tempCertFile);
+				fclose($tempCertKeyFile);
+
+				$this->debug_log('DEBUG', "Apple verifcation response", $response);
+
+				if ($response === false) {
+					wp_send_json_error();
+				} else {
+					wp_send_json_success($response);
+				}
+			} else {
+				error_log('URL should be SSL or contain apple.com. URL was: ' . $validationURL);
+				wp_send_json_error();
+			}
 		}
 	}
 
@@ -1330,7 +1408,7 @@ HTML;
 	 * Refunds a settled transactions or cancels
 	 * one not yet settled.
 	 *
-	 * @param Interger        $amount
+	 * @param Integer        $amount
 	 * @param Float         $amount
 	 */
 	public function process_refund($orderID, $amount = null, $reason = '')
@@ -1410,7 +1488,7 @@ HTML;
 
 			$orderMessage = ($refundResponse['responseCode'] == "0" ? "Refund Successful" : "Refund Unsuccessful") . "<br/><br/>";
 
-			$state = $refundResponse['state'] ?? null;
+			$state = ($refundResponse['state'] ?? null);
 
 			if ($state != 'canceled') {
 				$orderMessage .= "Amount Refunded: " . number_format($amountToRefund / pow(10, $refundResponse['currencyExponent']), $refundResponse['currencyExponent']) . "<br/><br/>";
@@ -1421,5 +1499,58 @@ HTML;
 		}
 
 		return new WP_Error('error', "Could not refund {$transactionXref}.");
+	}
+
+	/**
+	 * Send To
+	 * 
+	 * Posts data to a URL using curl.
+	 */
+	public function send_to($url, array $data, array $options = null, bool $raw = false)
+	{
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, ($raw ? http_build_query($data) : $data));
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+		if (isset($options)) {
+			curl_setopt_array($ch, $options);
+		}
+
+		try {
+			$ret = curl_exec($ch);
+		} catch (\exception $e) {
+			curl_close($ch);
+			$this->debug_log('DEBUG', "Curl exception", $e);
+		}
+
+		$curl_info = curl_getinfo($ch);
+		if ($ret === false) {
+			$curl_info['errno'] = $errno = (int)curl_errno($ch);
+			$curl_info['error'] = curl_error($ch);
+			$this->debug_log('DEBUG', "Request error", $curl_info);
+		} else if (isset($curl_info['http_code'])) {
+			$status = (int)$curl_info['http_code'];
+		}
+
+		curl_close($ch);
+		if ($ret === false) {
+			$this->debug_log('DEBUG', "Request error", $curl_info['errno']);
+		}
+
+		return $ret;
+	}
+
+	/**
+	 * Debug
+	 */
+	public function debug_log($type, $logMessage, $objects = null)
+	{
+		// If logging is not null and $type isin logging verbose selection.
+		if (isset(static::$logging_options[$type])) {
+			wc_get_logger()->{$type}(print_r($logMessage, true) . print_r($objects, true), array('source' => $this->title));
+		}
+		// If logging_options empty.
+		return;
 	}
 }
