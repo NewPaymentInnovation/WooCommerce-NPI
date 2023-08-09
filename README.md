@@ -1,6 +1,6 @@
 Disclaimer: Please note that we no longer support older versions of SDKs and Modules. We recommend that the latest versions are used.
 
-PaymentNetwork Woocommerce Plugin
+PaymentNetwork Woocommerce Plugin v3.0.0
 ==============
 
 This module enables the use of https://gateway.example.com payment gateway using the Woocommerce project http://www.woothemes.com.
@@ -77,3 +77,7 @@ a gateway URL i.e. https://gateway.example.com to be entered in the plugin's set
 You will then need to select an integration type to use.
 
 The module will also need to be enabled so it appears as a payment option on the checkout.
+
+**NOTE:**
+ The gateway_validation_available flag should only be set to true if your Gateway Merchant ID has been enabled for Apple Pay. Enabling it without gateway configuration could result in issues with transactions. 
+

@@ -82,7 +82,7 @@ function add_wc_payment_network_action_plugin($actions, $plugin_file)
 	if ($plugin == $plugin_file) {
 		$configs = include(dirname(__FILE__) . '/config.php');
 
-		$section = str_replace(' ', '', strtolower($configs['gateway_title']));
+		$section = str_replace(' ', '', strtolower($configs['default']['gateway_title']));
 
 		$actions = array_merge(array('settings' => '<a href="' . admin_url('admin.php?page=wc-settings&tab=checkout&section=' . $section) . '">' . __('Settings', 'General') . '</a>'), $actions);
 	}
