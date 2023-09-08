@@ -50,7 +50,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 	 * Module version
 	 * @var String
 	 */
-	protected static $module_version;
+	protected $module_version;
 
 	public function __construct()
 	{
@@ -62,7 +62,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		$this->icon					= plugins_url('/', dirname(__FILE__)) . 'assets/img/logo.png';
 		$this->method_title			= __($configs['default']['gateway_title'], $this->lang);
 		$this->method_description	= __($configs['default']['method_description'], $this->lang);
-		$this->module_version		= __($configs['module']['version'], $this->lang);
+		$this->module_version 		= (file_exists(dirname(__FILE__) . '/../VERSION') ? file_get_contents(dirname(__FILE__) . '/../VERSION') : "UV");
 
 		$this->supports = array(
 			'subscriptions',
@@ -859,20 +859,21 @@ class WC_Payment_Network extends WC_Payment_Gateway
 
 		// Fields for hash
 		$req = array(
-			'action'			  => 'SALE',
-			'merchantID'          => $this->settings['merchantID'],
-			'amount'              => $amount,
-			'countryCode'         => $this->settings['merchant_country_code'],
-			'currencyCode'        => $order->get_currency(),
-			'transactionUnique'   => uniqid($order->get_order_key() . '-'),
-			'orderRef'            => $order_id,
-			'customerName'        => $order->get_billing_first_name() . ' ' . $order->get_billing_last_name(),
-			'customerCountryCode' => $order->get_billing_country(),
-			'customerAddress'     => $billing_address,
-			'customerCounty'	  => $order->get_billing_state(),
-			'customerTown'		  => $order->get_billing_city(),
-			'customerPostCode'    => $order->get_billing_postcode(),
-			'customerEmail'       => $order->get_billing_email(),
+			'action'				=> 'SALE',
+			'merchantID'			=> $this->settings['merchantID'],
+			'amount'				=> $amount,
+			'countryCode'			=> $this->settings['merchant_country_code'],
+			'currencyCode'			=> $order->get_currency(),
+			'transactionUnique'		=> uniqid($order->get_order_key() . '-'),
+			'orderRef'				=> $order_id,
+			'customerName'			=> $order->get_billing_first_name() . ' ' . $order->get_billing_last_name(),
+			'customerCountryCode'	=> $order->get_billing_country(),
+			'customerAddress'		=> $billing_address,
+			'customerCounty'		=> $order->get_billing_state(),
+			'customerTown'			=> $order->get_billing_city(),
+			'customerPostCode'		=> $order->get_billing_postcode(),
+			'customerEmail'			=> $order->get_billing_email(),
+			'merchantData'			=> 'WC_APPLEPAY - ' . $this->module_version,
 		);
 
 		$phone = $order->get_billing_phone();
