@@ -10,7 +10,4 @@ return [
 		'title' => 'Apple Pay',
 		'gateway_validation_available' => false,
 	],
-	'module' => [
-		'version' => '3.0.0'
-	]
 ];

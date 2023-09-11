@@ -78,6 +78,12 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 	 */
 	protected static $logging_options;
 
+	/**
+	 * Module version
+	 * @var String
+	 */
+	protected $module_version;
+
 	public function __construct()
 	{
 
@@ -93,14 +99,15 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		// $this->icon                       = plugins_url('/', dirname(__FILE__)) . 'assets/img/logo.png';
 		$this->method_title = __($configs['default']['gateway_title'], $this->lang);
 		$this->method_description = __($configs['applepay']['method_description'], $this->lang);
+		$this->module_version 		= (file_exists(dirname(__FILE__) . '/../VERSION') ? file_get_contents(dirname(__FILE__) . '/../VERSION') : "UV");
 		$this->gatewayValidationAvailable = $configs['applepay']['gateway_validation_available'];
 		// Get main modules settings to use in this sub module.
 		$mainModuleID = str_replace("_applepay", "", $this->id);
 		$mainModuleSettings = get_option('woocommerce_' . $mainModuleID . '_settings');
 
-		$this->defaultGatewayURL = $mainModuleSettings['gatewayURL'];
-		$this->defaultMerchantID = $mainModuleSettings['merchantID'];
-		$this->defaultMerchantSignature = $mainModuleSettings['signature'];
+		$this->defaultGatewayURL = ($mainModuleSettings['gatewayURL'] ?? null);
+		$this->defaultMerchantID = ($mainModuleSettings['merchantID'] ?? null);
+		$this->defaultMerchantSignature = ($mainModuleSettings['signature'] ?? null);
 
 		$this->supports = array(
 			'subscriptions',
@@ -121,7 +128,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 
 		static::$logging_options = (empty($this->settings['logging_options']) ? null : array_flip(array_map('strtoupper', $this->settings['logging_options'])));
 		$this->title = $this->settings['title'];
-		$this->gatewayMerchantValidation = $this->settings['gateway_merchant_validation'];
+		$this->gatewayMerchantValidation = ($this->settings['gateway_merchant_validation'] ?? null);
 
 		// Register hooks.
 		add_action('woocommerce_scheduled_subscription_payment_' . $this->id, array($this, 'process_scheduled_subscription_payment_callback'), 10, 3);
@@ -135,7 +142,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 
 		add_action('woocommerce_proceed_to_checkout', array($this, 'cart_page_ap'));
 
-		if ($mainModuleSettings['enabled'] == "no") {
+		if (isset($mainModuleSettings['enabled']) && $mainModuleSettings['enabled'] == "no") {
 			$this->enabled = "no";
 		}
 
@@ -303,7 +310,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		}
 
 		// The key password is stored in settings.
-		$currentSavedKeyPassword = $this->settings['merchant_cert_key_password'];
+		$currentSavedKeyPassword = ($this->settings['merchant_cert_key_password'] ?? null);
 
 		$certificateSaveResultHTML = '';
 		$certificateSetupStatus = '';
@@ -669,7 +676,7 @@ HTML;
 			'transactionUnique' => uniqid($order->get_order_key() . "-"),
 			'type' => '1',
 			'paymentMethod' => 'applepay',
-			'merchantData' => 'WC_APPLEPAY',
+			'merchantData' => 'WC_APPLEPAY - ' . $this->module_version,
 			'paymentToken' => $paymentData->token->paymentData,
 			'customerName' => $order->get_billing_first_name() . ' ' . $order->get_billing_last_name(),
 			'customerAddress' => $order->get_billing_address_1() . '\n' . $order->get_billing_address_2(),
