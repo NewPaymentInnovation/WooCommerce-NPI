@@ -124,7 +124,6 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 
 		$this->nonce_key = '12d4c8031f852b9c';
 
-		$this->init_form_fields();
 		$this->init_settings();
 
 		static::$logging_options = (empty($this->settings['logging_options']) ? null : array_flip(array_map('strtoupper', $this->settings['logging_options'])));
@@ -146,6 +145,8 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		if (isset($mainModuleSettings['enabled']) && $mainModuleSettings['enabled'] == "no") {
 			$this->enabled = "no";
 		}
+
+		$this->init_form_fields();
 	}
 
 
