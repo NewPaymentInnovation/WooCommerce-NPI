@@ -248,6 +248,11 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 				),
 				'description' => __('This controls if logging is turned on and how verbose it is. Warning! Logging will take up additional space, especially if Debug is selected.', $this->lang),
 			),
+			'merchant_display_name' => array(
+				'title' => __('Merchant display name.', $this->lang),
+				'type' => 'text',
+				'description' => __('The Apple Pay merchant display name.', $this->lang),
+			),
 		);
 
 		if ($this->gatewayValidationAvailable) {
@@ -264,11 +269,6 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		if (($this->gatewayMerchantValidation === 'no' && $this->gatewayValidationAvailable) || $this->gatewayValidationAvailable === false) {
 
 			$this->form_fields = array_merge($this->form_fields, [
-				'merchant_display_name' => array(
-					'title' => __('Merchant display name.', $this->lang),
-					'type' => 'text',
-					'description' => __('The Apple Pay merchant display name.', $this->lang),
-				),
 				'merchant_identifier' => array(
 					'title' => __('Merchant identifier', $this->lang),
 					'type' => 'text',
@@ -509,8 +509,11 @@ HTML;
 				'merchantID' => $this->defaultMerchantID,
 				'process' => 'applepay.validateMerchant',
 				'validationURL' => 'https://apple-pay-gateway-cert.apple.com/paymentservices/paymentSession',
-				'displayName' => 'merchant.' . $this->defaultMerchantID,
+				'displayName' => $this->settings['merchant_display_name'],
 				'domainName' => $apwDomainName,
+				'action' => 'VERIFY',
+				'amount' => 0,
+				'redirectURL' => 'https://example.com',
 			);
 
 			$gatewayRequest['signature'] = $this->createSignature($gatewayRequest, $this->defaultMerchantSignature);

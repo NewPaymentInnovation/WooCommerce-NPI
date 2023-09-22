@@ -873,7 +873,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 			'customerTown'			=> $order->get_billing_city(),
 			'customerPostCode'		=> $order->get_billing_postcode(),
 			'customerEmail'			=> $order->get_billing_email(),
-			'merchantData'			=> 'WC_APPLEPAY - ' . $this->module_version,
+			'merchantData'			=> 'WC - ' . $this->module_version,
 		);
 
 		$phone = $order->get_billing_phone();
