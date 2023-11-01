@@ -127,7 +127,7 @@ class WC_Payment_Network_ApplePay extends WC_Payment_Gateway
 		$this->init_settings();
 
 		static::$logging_options = (empty($this->settings['logging_options']) ? null : array_flip(array_map('strtoupper', $this->settings['logging_options'])));
-		$this->title = $this->settings['title'];
+		$this->title = ($this->settings['title'] ?? null);
 		$this->gatewayMerchantValidation = ($this->settings['gateway_merchant_validation'] ?? null);
 
 		// Register hooks.

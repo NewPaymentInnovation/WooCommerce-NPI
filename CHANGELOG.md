@@ -20,3 +20,10 @@ Module version sent in transactions merchant data.
 ### Added
 
 Fields added to Apple Pay gateway validation request.
+
+## [3.0.3] - 2023-10-10
+
+### Fixed
+
+Incorrect action when initial subscription payment amount is 0.
+Missing customer country on hosted form.

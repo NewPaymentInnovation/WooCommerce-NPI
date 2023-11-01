@@ -742,7 +742,6 @@ class WC_Payment_Network extends WC_Payment_Gateway
 
 			$req = array(
 				'merchantID' => $this->settings['merchantID'],
-				'action' => 'SALE',
 				// The following field must be passed to continue the 3DS request
 				'threeDSRef' => $_COOKIE['threeDSRef'],
 				'threeDSResponse' => $_POST,
@@ -859,7 +858,7 @@ class WC_Payment_Network extends WC_Payment_Gateway
 
 		// Fields for hash
 		$req = array(
-			'action'				=> 'SALE',
+			'action'				=> ($amount == 0 ? 'VERIFY' : 'SALE'),
 			'merchantID'			=> $this->settings['merchantID'],
 			'amount'				=> $amount,
 			'countryCode'			=> $this->settings['merchant_country_code'],
@@ -880,6 +879,13 @@ class WC_Payment_Network extends WC_Payment_Gateway
 		if (!empty($phone)) {
 			$req['customerPhone'] = $phone;
 			unset($phone);
+		}
+
+		/**
+		 * Add extra fields for hosted intergrations.
+		 */
+		if (!empty($req['customerCountryCode']) && $this->settings['type'] !== 'direct') {
+			$req = array_merge($req, ['customerCountryCodeMandatory' => 'Y']);
 		}
 
 		/**
