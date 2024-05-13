@@ -2,8 +2,8 @@
 
 return [
 	'default' => [
-		'gateway_title' => 'Payment Network',
-		'method_description' => 'Pay securely via Credit / Debit Card with PaymentNetwork',
+		'gateway_title' => 'NPI Gateway',
+		'method_description' => 'Pay securely via Credit / Debit Card with NPI',
 	],
 	'applepay' => [
 		'method_description' => 'Apple Pay description',

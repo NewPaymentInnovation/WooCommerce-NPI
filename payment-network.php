@@ -1,7 +1,8 @@
 <?php
 /*
-Plugin Name: PaymentNetwork
-Description: Provides the PaymentNetwork Payment Gateway for WooCommerce
+Plugin Name: NPI Gateway 
+Description: Provides the NPI Gateway for WooCommerce
+version: 3.0.6
 */
 
 /**
@@ -41,8 +42,8 @@ function init_wc_payment_network()
 	 * Add Apple Pay AJAX options
 	 */
 
-	include('includes/class-wc-payment-network.php');
-	include('includes/class-wc-payment-network-applepay.php');
+	include ('includes/class-wc-payment-network.php');
+	include ('includes/class-wc-payment-network-applepay.php');
 
 	// Validate Apple Pay merchant
 	add_action('wp_ajax_nopriv_process_applepay_payment', array(new WC_Payment_Network_ApplePay, 'process_applepay_payment'), 10, 2);
@@ -80,7 +81,7 @@ function add_wc_payment_network_action_plugin($actions, $plugin_file)
 	}
 
 	if ($plugin == $plugin_file) {
-		$configs = include(dirname(__FILE__) . '/config.php');
+		$configs = include (dirname(__FILE__) . '/config.php');
 
 		$section = str_replace(' ', '', strtolower($configs['default']['gateway_title']));
 
@@ -107,7 +108,7 @@ function setup_module_database_tables()
 	//Wallet table name.
 	$wallet_table_name = $wpdb->prefix . 'woocommerce_' . $module_prefix . 'wallets';
 
-	if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $wallet_table_name)) ===  null) {
+	if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $wallet_table_name)) === null) {
 		$table_name = $wallet_table_name;
 
 		$charset_collate = $wpdb->get_charset_collate();
@@ -120,7 +121,7 @@ function setup_module_database_tables()
 			PRIMARY KEY  (id)
 		) $charset_collate;";
 
-		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+		require_once (ABSPATH . 'wp-admin/includes/upgrade.php');
 		dbDelta($sql);
 
 		add_option('jal_db_version', $jal_db_version);
