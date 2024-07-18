@@ -1,32 +1,26 @@
 Disclaimer: Please note that we no longer support older versions of SDKs and Modules. We recommend that the latest versions are used.
 
-NPI Woocommerce Plugin v3.0.0
-==============
+# NPI Woocommerce Plugin v3.1.0
 
 This module enables the use of https://gateway.example.com payment gateway using the Woocommerce project.
 
-COMPATIBILITY
-------------
+## COMPATIBILITY
 
-Compatible with version 6.x of Woocommerce and upto 6.x of Wordpress. 
+Compatible with version 6.x of Woocommerce and upto 6.x of Wordpress.
 
-REQUIREMENTS
-------------
+## REQUIREMENTS
 
 PHP-BCMaths
 
-INTRODUCTION
-------------
+## INTRODUCTION
 
 This module enables the woocommerce customers to pay for their items using the PaymentNetwork hosted form or direct payment gateway.
 
-What does it do?
-----------------
+## What does it do?
+
 Presents the option to pay with credit card or debit card via the PaymentNetwork payment gateway.
 
-
-INSTALLATION
-------------
+## INSTALLATION
 
 1. Go to the plugins section of the admin panel
 
@@ -36,22 +30,18 @@ INSTALLATION
 
 4. Click the "Choose File" button and select the module (which will be the whole zip file this readme is in)
 
-4. Click the "Install Now" button and then click the "Activate" button.
+5. Click the "Install Now" button and then click the "Activate" button.
 
-
-Manual installation 
---------------------
+## Manual installation
 
 1. Unzip and upload the plugin folder to your /wp-content/plugins/ directory
 
 2. Activate the plugin through the Plugins menu in WordPress
 
-3. Go to WooCommerce -> Settings and click on the Checkout tab. 
+3. Go to WooCommerce -> Settings and click on the Checkout tab.
 
-4. Find PaymentNetwork in the Payment Gateways section 
+4. Find PaymentNetwork in the Payment Gateways section
 
 5. Click the settings button to configure and enable the gateway.
 
 6. Click 'Save Changes'.
-
-
