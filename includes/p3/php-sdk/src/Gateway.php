@@ -235,8 +235,7 @@ HTML;
 	}
 
 	// Render HTML to silently POST data to URL in target browser window
-	static public function silentPost($url = '?', array $post = null, $target = '_self'): string
-	{
+	static public function silentPost($url = '?', array $post = null, $target = '_self'): string {
 
 		$url = htmlentities($url);
 		$target = htmlentities($target);

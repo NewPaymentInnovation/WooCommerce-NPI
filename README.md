@@ -1,6 +1,6 @@
 Disclaimer: Please note that we no longer support older versions of SDKs and Modules. We recommend that the latest versions are used.
 
-# NPI Woocommerce Plugin v3.1.0
+# NPI Woocommerce Plugin v3.1.1
 
 This module enables the use of https://gateway.example.com payment gateway using the Woocommerce project.
 
@@ -45,3 +45,26 @@ Presents the option to pay with credit card or debit card via the PaymentNetwork
 5. Click the settings button to configure and enable the gateway.
 
 6. Click 'Save Changes'.
+
+## Rebrand Instructions
+
+The module does not require any editing of file to be used. The options can be changed via the plugin settings.
+However you can pre set some of the branding options by by editing the config.php file.
+This will allow you to set the defaults which are :
+
+gateway_title is the title of the module that will appear to the user when selecting the payment method on the checkout.
+method_description is the description that appears in the payment selected on checkout.
+default_merchant_id is the default merchant ID the module will use. It's recommended to use a test account.
+default_secrect is the signature/secret for the default merchant.
+
+## Setup Instructions
+
+Setting up the module requires at a minimum a merchantID, a signature/secret key and
+a gateway URL i.e. https://gateway.example.com to be entered in the plugin's settings.
+
+You will then need to select an integration type to use.
+
+The module will also need to be enabled so it appears as a payment option on the checkout.
+
+**NOTE:**
+The gateway_validation_available flag should only be set to true if your Gateway Merchant ID has been enabled for Apple Pay. Enabling it without gateway configuration could result in issues with transactions.
