@@ -1,6 +1,6 @@
 Disclaimer: Please note that we no longer support older versions of SDKs and Modules. We recommend that the latest versions are used.
 
-# NPI Woocommerce Plugin v3.1.1
+# NPI Woocommerce Plugin v3.2.0
 
 This module enables the use of https://gateway.example.com payment gateway using the Woocommerce project.
 
