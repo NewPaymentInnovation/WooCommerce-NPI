@@ -1,0 +1,22 @@
+.wcpm-hosted-custom-fields {
+	margin-top: 8px;
+	max-width: 900px;
+}
+
+.wcpm-hosted-custom-fields-table th,
+.wcpm-hosted-custom-fields-table td {
+	vertical-align: middle;
+}
+
+.wcpm-hosted-custom-fields-table .wcpm-actions-col {
+	width: 90px;
+	text-align: center;
+}
+
+.wcpm-hosted-custom-fields-table input[type="text"] {
+	width: 100%;
+}
+
+.wcpm-hosted-custom-fields-actions {
+	margin-top: 8px;
+}

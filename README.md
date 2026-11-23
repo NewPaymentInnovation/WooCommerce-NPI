@@ -1,70 +1,97 @@
-Disclaimer: Please note that we no longer support older versions of SDKs and Modules. We recommend that the latest versions are used.
+Disclaimer: Please note that we no longer support older versions of SDKs and
+Modules. We recommend that the latest versions are used. Please note version
+4.1.3 contains a rebuild of the core module infrastructure, please ensure you
+take relevant measures when updating to ensure compatibility with your 
+integrations.
 
-# NPI Woocommerce Plugin v3.2.0
+# NPI Gateway
 
-This module enables the use of https://gateway.example.com payment gateway using the Woocommerce project.
+NPI Gateway is a WooCommerce payment plugin for processing card 
+payments, Apple Pay, Google Pay, and hosted payment forms.
 
-## COMPATIBILITY
+Current plugin version: **4.1.3**
 
-Compatible with version 6.x of Woocommerce and upto 6.x of Wordpress.
+## Requirements
 
-## REQUIREMENTS
+- WordPress 6.0+
+- WooCommerce 8.0+
+- PHP 7.4+
 
-PHP-BCMaths
+## Optional
 
-## INTRODUCTION
+- WooCommerce Subscriptions 8.6.0+ (for recurring payments)
 
-This module enables the woocommerce customers to pay for their items using the PaymentNetwork hosted form or direct payment gateway.
+## Supported Payment Methods
 
-## What does it do?
+| Method | Features |
+|---|---|
+| **Card** | Hosted Fields, tokenisation (saved cards), 3D Secure, refunds, subscriptions |
+| **Apple Pay** | Express checkout, refunds, subscriptions |
+| **Google Pay** | Express checkout, 3D Secure, refunds, subscriptions |
+| **Hosted** | Hosted Payment Form (v1, modal, custom URL), refunds, subscriptions |
 
-Presents the option to pay with credit card or debit card via the PaymentNetwork payment gateway.
+All methods support both WooCommerce classic checkout and block-based checkout.
 
-## INSTALLATION
+## Installation
 
-1. Go to the plugins section of the admin panel
+### Install from ZIP (WP Admin)
 
-2. Click Add New
+1. Download the plugin ZIP package.
+2. Log in to your WordPress admin dashboard.
+3. Go to **Plugins -> Add New -> Upload Plugin**.
+4. Upload the ZIP file, then click **Install Now**.
+5. Activate the plugin.
 
-3. Click Upload plugin (Near the top left of the page nexto the menu)
+### Manual Installation
 
-4. Click the "Choose File" button and select the module (which will be the whole zip file this readme is in)
+1. Upload the `woocommerce-payment-module` folder to `wp-content/plugins/`.
+2. Activate the plugin from **Plugins -> Installed Plugins**.
 
-5. Click the "Install Now" button and then click the "Activate" button.
+## Configuration
 
-## Manual installation
+After activation, configure the plugin in two places:
 
-1. Unzip and upload the plugin folder to your /wp-content/plugins/ directory
+### 1) Module Settings
 
-2. Activate the plugin through the Plugins menu in WordPress
+Go to **WooCommerce -> NPI Gateway**.
 
-3. Go to WooCommerce -> Settings and click on the Checkout tab.
+| Setting | Description |
+|---|---|
+| Enable Plugin | Enables or disables the plugin globally |
+| Merchant ID | Your gateway merchant ID |
+| Merchant Secret | Your gateway merchant signature key |
+| Country Code | ISO 3166-1 numeric country code of the merchant (for example, `826` for the United Kingdom) |
+| Gateway Hostname | Gateway URL (for example, `gateway.exampled.com`) |
+| Debug Enabled | Enables logging to WooCommerce logs |
+| Debug Verbose | Selects which log levels are recorded |
 
-4. Find PaymentNetwork in the Payment Gateways section
+Logs are available under **WooCommerce -> Status -> Logs**.
 
-5. Click the settings button to configure and enable the gateway.
+### 2) Payment Method Settings
 
-6. Click 'Save Changes'.
+Go to **WooCommerce -> Settings -> Payments** and configure each method:
 
-## Rebrand Instructions
+## Updating
 
-The module does not require any editing of file to be used. The options can be changed via the plugin settings.
-However you can pre set some of the branding options by by editing the config.php file.
-This will allow you to set the defaults which are :
+1. Back up your store files and database.
+2. Deactivate and remove the old plugin version.
+3. Install the new version using one of the installation methods above.
+4. Re-check module and payment method settings after activation.
 
-gateway_title is the title of the module that will appear to the user when selecting the payment method on the checkout.
-method_description is the description that appears in the payment selected on checkout.
-default_merchant_id is the default merchant ID the module will use. It's recommended to use a test account.
-default_secrect is the signature/secret for the default merchant.
+## Disclaimer
 
-## Setup Instructions
-
-Setting up the module requires at a minimum a merchantID, a signature/secret key and
-a gateway URL i.e. https://gateway.example.com to be entered in the plugin's settings.
-
-You will then need to select an integration type to use.
-
-The module will also need to be enabled so it appears as a payment option on the checkout.
-
-**NOTE:**
-The gateway_validation_available flag should only be set to true if your Gateway Merchant ID has been enabled for Apple Pay. Enabling it without gateway configuration could result in issues with transactions.
+Sample code, SDKs and modules have been created as reference material only.
+Modules are developed and tested against vanilla base platform installs only.
+Any further module compatibility would need to be tested by the 
+user/merchant/developer. Version support is as shown within the associated 
+VERSION section. All sample code, SDKs and modules offer foundation transaction 
+functionality for merchant and developers to use as a guide and/or to adapt, 
+enhance or otherwise build upon. For the avoidance of doubt, this means that 
+some desired functionality may not be useable or exist. All sample code, SDKs 
+or modules that are used will require complete full end to end testing by the 
+user/merchant/developer. Further to this, use of any sample code, SDKs or 
+modules, Open Payment Network bears no responsibility for; nor extends any 
+warranty in regard to; nor accepts any liability arising due to any changes 
+or errors in functionality that may result. Developers, merchants or other 
+users of any sample code, SDKs or modules accept these conditions de facto 
+upon usage.

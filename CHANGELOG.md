@@ -1,72 +1,26 @@
-# WC Module Change Log
-
-## [3.0.0] - 2023-06-28
-
-### Added
-
-Added Apple Pay intergration for direct Apple Pay payments from the checkout or cart page.
-Added Gateway validation option for Apple Pay.
-
-## [3.0.1] - 2023-08-17
+## Version 4.1.0-rc
+=================
 
 ### Added
+- **Payment Methods**: Card (hosted fields), Hosted Payment Page, Google Pay, and Apple Pay
+- **Subscriptions**: WooCommerce Subscriptions support for recurring payments via card tokenisation
+- **Express Payment Options**: Google Pay and Apple Pay express checkout buttons on product and cart pages
 
-Version file.
-ChangeLog file.
-Module version sent in transactions merchant data.
+## Version 4.1.1-rc
+=================
 
-## [3.0.2] - 2023-09-22
+### Updated
+- **Apple Pay Validation**: Method of domain name retrieval updated.
 
-### Added
-
-Fields added to Apple Pay gateway validation request.
-
-## [3.0.3] - 2023-10-10
-
-### Fixed
-
-Incorrect action when initial subscription payment amount is 0.
-Missing customer country on hosted form.
-
-## [3.0.4] - 2023-11-02
+## Version 4.1.2-rc
+=================
 
 ### Fixed
+- **Apple Pay PostCode**: Corrected Apple Pay postcode extraction to account for 4 characters at the start of the postcode.
 
-Incorrect handling of non 3DS or frictionless transactions 
-using direct integration.
-
-## [3.0.5] - 2023-11-20
-
-### Fixed
-
-Missing merchant details when refunding.
-
-## [3.0.6] - 2024-04-24
+## Version 4.1.3
+=================
 
 ### Fixed
-
-Function called incorrectly error appearing in log.
-
-## [3.1.0] - 2024-05-08
-
-### Fixed
-
-Incorrect Apple Pay validation URL being passed to Gateway.
-
-Missing WorldWide shipping zones on Apple Pay shipping selection.
-
-Shipping zones that require a coupon will now not be returned unless a valid
-coupon is present.
-
-
-## [3.2.0] - 2024-05-08
-
-### Added
-Added Hosted Fields to Direct 3DS integration.
-
-### Removed
-Removed payform JavaScript in replacement for Hosted Fields.
-Removed files no longer required.
-
-### Changed
-Moved Gateway SDK to new location.
+- **Apple Pay PostCode**: Added helper to handle shipping options that filter by postcode when partial postcode provided.
+- **Google Pay billing phone**: Fixed billing phone not required when checkout form does require it.

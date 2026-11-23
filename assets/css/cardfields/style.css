@@ -1,0 +1,27 @@
+/* Hosted payment field containers (iframes injected by the library) */
+.wc-payment-form .hostedfield {
+	display: block;
+	width: 100%;
+	height: 55px;
+	padding: 0 8px;
+	border: 1px solid #8c8f94;
+	border-radius: 4px;
+	background-color: #fff;
+	box-sizing: border-box;
+	transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.wc-payment-form .hostedfield.hf-focus {
+	border-color: #2271b1;
+	box-shadow: 0 0 0 1px #2271b1;
+}
+
+.wc-payment-form .hostedfield.hf-invalid:not(.hf-focus) {
+	border-color: #d63638;
+}
+
+.wc-payment-form .hostedfield.hf-disabled {
+	background-color: #f0f0f1;
+	border-color: #dcdcde;
+	cursor: not-allowed;
+}

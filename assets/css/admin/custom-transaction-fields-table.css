@@ -1,0 +1,41 @@
+.woocommerce_page_wc-settings textarea[id$="_custom_transaction_fields"] {
+display: none !important;
+}
+
+.wcpm-custom-transaction-fields {
+margin-top: 8px;
+max-width: 900px;
+}
+
+.wcpm-custom-transaction-fields-table th,
+.wcpm-custom-transaction-fields-table td {
+padding: 10px 12px;
+vertical-align: middle;
+}
+
+.wcpm-custom-transaction-fields-table .wcpm-actions-col {
+width: 90px;
+text-align: center;
+}
+
+.wcpm-custom-transaction-fields-table input[type="text"] {
+width: 100%;
+}
+
+.wcpm-custom-transaction-fields-actions {
+margin-top: 8px;
+}
+
+.wcpm-custom-transaction-fields-notice {
+margin: 8px 0 0;
+}
+
+.wcpm-custom-transaction-fields-notice.wcpm-error {
+color: #b32d2e;
+font-weight: 600;
+}
+
+.wcpm-custom-transaction-fields-table .wcpm-key.wcpm-duplicate-key {
+border-color: #b32d2e;
+box-shadow: 0 0 0 1px #b32d2e;
+}
